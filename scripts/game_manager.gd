@@ -26,6 +26,7 @@ var kicker_score: int = 0
 var goalkeeper_score: int = 0
 var current_shot: int = 0
 var _shot_resolved: bool = false
+var _shot_timeout_timer: SceneTreeTimer
 
 signal penalty_started
 signal kick_released(power: float, kick_target: Vector3)
@@ -104,6 +105,8 @@ func _connect_signals():
 
 	if ball:
 		ball.ball_stopped.connect(_on_ball_stopped)
+		if ball.has_signal("crossed_goal_line"):
+			ball.crossed_goal_line.connect(_on_ball_crossed_goal_line)
 
 	if goal_zone:
 		goal_zone.goal_detected.connect(_on_goal_detected)
@@ -148,6 +151,16 @@ func _on_ball_launch_requested(velocity: Vector3):
 	_shot_resolved = false
 	ball_hit.emit(velocity)
 
+	# Fail-safe timeout: resolve shot if unresolved after 4.5 seconds
+	_start_shot_timeout_failsafe()
+
+func _start_shot_timeout_failsafe():
+	var shot_id = current_shot
+	await get_tree().create_timer(4.5).timeout
+	if current_shot == shot_id and not _shot_resolved and current_state == PenaltyState.BALL_FLYING:
+		print("[GameManager] Fail-safe timeout: Shot unresolved after 4.5s. Resolving as MISS.")
+		_on_ball_stopped()
+
 func _on_keeper_save(ball_hit_ref: SoccerBall):
 	if _shot_resolved or current_state != PenaltyState.BALL_FLYING:
 		return
@@ -160,11 +173,18 @@ func _on_keeper_save(ball_hit_ref: SoccerBall):
 	_next_shot()
 
 func _on_keeper_deflect(ball_hit_ref: SoccerBall):
-	if _shot_resolved or current_state != PenaltyState.BALL_FLYING:
+	if current_state != PenaltyState.BALL_FLYING:
 		return
-	_shot_resolved = true
 	ball_deflected.emit()
 	print("[GameManager] DEFLECTED! Body collision")
+
+func _on_ball_crossed_goal_line(pos: Vector3):
+	if _shot_resolved or current_state != PenaltyState.BALL_FLYING:
+		return
+	# Check if inside goal frame bounds (Width: 7.32 -> [-3.66, 3.66], Height: 2.44 -> [0.0, 2.44])
+	if abs(pos.x) <= 3.7 and pos.y >= -0.1 and pos.y <= 2.5:
+		print("[GameManager] GOAL detected via goal line crossing fail-safe!")
+		_on_goal_detected()
 
 func _on_goal_detected():
 	if _shot_resolved or current_state != PenaltyState.BALL_FLYING:
@@ -188,7 +208,7 @@ func _on_ball_stopped():
 	_next_shot()
 
 func _next_shot():
-	await get_tree().create_timer(2.0).timeout
+	await get_tree().create_timer(1.8).timeout
 	if current_shot < shots_per_round:
 		start_penalty()
 	else:
