@@ -1,0 +1,310 @@
+[gd_scene format=3 uid="uid://dmainmenu0001"]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_menu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.06, 0.09, 0.14, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.1, 0.14, 0.22, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.5, 0.75, 0.8)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_play_norm"]
+bg_color = Color(0.15, 0.55, 0.3, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.9, 0.5, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_play_hover"]
+bg_color = Color(0.2, 0.7, 0.38, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 1, 0.7, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_norm"]
+bg_color = Color(0.16, 0.22, 0.32, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.5, 0.7, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+bg_color = Color(0.24, 0.35, 0.5, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.7, 1, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="MainMenu" type="Control" node_paths=PackedStringArray("main_panel", "options_panel", "btn_play", "btn_options", "btn_quit", "slider_master", "slider_music", "slider_sfx", "check_fullscreen", "option_difficulty", "option_shots", "btn_close_options")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+main_panel = NodePath("MainCard")
+options_panel = NodePath("OptionsCard")
+btn_play = NodePath("MainCard/VBox/BtnPlay")
+btn_options = NodePath("MainCard/VBox/BtnOptions")
+btn_quit = NodePath("MainCard/VBox/BtnQuit")
+slider_master = NodePath("OptionsCard/VBox/AudioGrid/SliderMaster")
+slider_music = NodePath("OptionsCard/VBox/AudioGrid/SliderMusic")
+slider_sfx = NodePath("OptionsCard/VBox/AudioGrid/SliderSFX")
+check_fullscreen = NodePath("OptionsCard/VBox/VideoGrid/CheckFullscreen")
+option_difficulty = NodePath("OptionsCard/VBox/GameGrid/OptionDifficulty")
+option_shots = NodePath("OptionsCard/VBox/GameGrid/OptionShots")
+btn_close_options = NodePath("OptionsCard/VBox/BtnCloseOptions")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="HeaderContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 50.0
+offset_right = 300.0
+offset_bottom = 160.0
+grow_horizontal = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="HeaderContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 46
+text = "⚽ PENALTY SHOOTOUT"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="HeaderContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.8, 1, 0.9)
+theme_override_font_sizes/font_size = 18
+text = "SIMULADOR DE TIROS PENALES 3D"
+horizontal_alignment = 1
+
+[node name="MainCard" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -170.0
+offset_top = -60.0
+offset_right = 170.0
+offset_bottom = 210.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="VBox" type="VBoxContainer" parent="MainCard"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="BtnPlay" type="Button" parent="MainCard/VBox"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_play_norm")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_play_hover")
+text = "▶ ¡JUGAR PARTIDO!"
+
+[node name="BtnOptions" type="Button" parent="MainCard/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_norm")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "⚙ OPCIONES"
+
+[node name="BtnQuit" type="Button" parent="MainCard/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_norm")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "❌ SALIR"
+
+[node name="OptionsCard" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = -180.0
+offset_right = 230.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="VBox" type="VBoxContainer" parent="OptionsCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="OptionsCard/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "OPCIONES DE JUEGO"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="OptionsCard/VBox"]
+layout_mode = 2
+
+[node name="AudioGrid" type="GridContainer" parent="OptionsCard/VBox"]
+layout_mode = 2
+columns = 2
+
+[node name="LabelMaster" type="Label" parent="OptionsCard/VBox/AudioGrid"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Volumen General:"
+
+[node name="SliderMaster" type="HSlider" parent="OptionsCard/VBox/AudioGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 1.0
+
+[node name="LabelMusic" type="Label" parent="OptionsCard/VBox/AudioGrid"]
+layout_mode = 2
+text = "Música:"
+
+[node name="SliderMusic" type="HSlider" parent="OptionsCard/VBox/AudioGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="LabelSFX" type="Label" parent="OptionsCard/VBox/AudioGrid"]
+layout_mode = 2
+text = "Efectos SFX:"
+
+[node name="SliderSFX" type="HSlider" parent="OptionsCard/VBox/AudioGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="HSeparator2" type="HSeparator" parent="OptionsCard/VBox"]
+layout_mode = 2
+
+[node name="VideoGrid" type="GridContainer" parent="OptionsCard/VBox"]
+layout_mode = 2
+columns = 2
+
+[node name="LabelVideo" type="Label" parent="OptionsCard/VBox/VideoGrid"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Pantalla Completa:"
+
+[node name="CheckFullscreen" type="CheckBox" parent="OptionsCard/VBox/VideoGrid"]
+layout_mode = 2
+text = "Habilitar"
+
+[node name="HSeparator3" type="HSeparator" parent="OptionsCard/VBox"]
+layout_mode = 2
+
+[node name="GameGrid" type="GridContainer" parent="OptionsCard/VBox"]
+layout_mode = 2
+columns = 2
+
+[node name="LabelDiff" type="Label" parent="OptionsCard/VBox/GameGrid"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Dificultad Arquero:"
+
+[node name="OptionDifficulty" type="OptionButton" parent="OptionsCard/VBox/GameGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LabelShots" type="Label" parent="OptionsCard/VBox/GameGrid"]
+layout_mode = 2
+text = "Tiros por Ronda:"
+
+[node name="OptionShots" type="OptionButton" parent="OptionsCard/VBox/GameGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ControlSpacer" type="Control" parent="OptionsCard/VBox"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="BtnCloseOptions" type="Button" parent="OptionsCard/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_norm")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "✔ GUARDAR Y VOLVER"
+
+[node name="FooterLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -40.0
+offset_right = 200.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 0.6)
+theme_override_font_sizes/font_size = 14
+text = "Godot Penalty Game • 2026"
+horizontal_alignment = 1

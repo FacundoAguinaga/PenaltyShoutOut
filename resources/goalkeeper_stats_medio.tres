@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="GoalkeeperStats" load_steps=2 format=3 uid=""]
+
+[ext_resource type="Script" path="res://resources/goalkeeper_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+reflexes = 55.0
+reaction_time = 0.25
+reach = 55.0
+dive_speed = 55.0
