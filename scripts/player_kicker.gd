@@ -33,8 +33,21 @@ enum KickState {
 @export var max_power: float = 100.0
 @export var optimal_power_min: float = 75.0
 @export var optimal_power_max: float = 90.0
-@export var ball_contact_animation_progress: float = 0.55
-@export var run_up_duration: float = 1.2
+## Second of the kick animation where the kicking foot hits the ball: the
+## foot is at its lowest point and at full speed (12.5 m/s), right beside the
+## plant foot. Measured on "Soccerpenaltykick" (a hair early: the check runs
+## once per frame and the foot moves ~20 cm per frame there).
+@export var kick_contact_time: float = 0.715
+## Pause between releasing the shot and starting the approach. The kick
+## animation already contains the run-up steps, so there is no jog.
+@export var run_up_duration: float = 0.4
+## Distance from the toe joint to the ball centre at contact (the ball sits a
+## bit ahead of the toe).
+@export var toe_to_ball: float = 0.12
+## Foot IK during the kick. Off: the animation, with the kicker placed so the
+## foot goes through the ball, already hits it; the IK pinned the plant foot
+## at the start of the approach and stretched the leg.
+@export var use_kick_ik: bool = false
 @export var max_aim_goal_height: float = 2.8
 @export var min_aim_goal_height: float = 0.0
 @export var aim_horizontal_range: float = 4.2
@@ -54,10 +67,12 @@ var power_filling: bool = true
 var final_power: float = 0.0
 var final_target: Vector3 = Vector3.ZERO
 var run_up_timer: float = 0.0
-var is_run_up_complete: bool = false
 var is_kick_complete: bool = false
 var plant_foot_world_pos: Vector3
 var _last_shot_data: ShotData
+## Where the ball must be, relative to the kicker, for the kick animation to
+## hit it (measured once in _ready from the animation itself).
+var _contact_offset := Vector3.ZERO
 
 signal kick_connecting(power: float, kick_target: Vector3)
 signal ball_launch_requested(velocity: Vector3)
@@ -66,6 +81,31 @@ signal shot_taken(shot_data: ShotData)
 func _ready():
 	_find_skeleton_and_anim_player()
 	_setup_ik()
+	_measure_contact_offset()
+
+## Poses the kick animation at kick_contact_time and reads where the kicking
+## toe is. The ball has to be there (plus toe_to_ball forward), so before every
+## shot the kicker stands at ball - offset and the foot goes right through it.
+func _measure_contact_offset():
+	if not animation_player or not skeleton:
+		return
+	var kick_anim := _kick_animation_name()
+	if kick_anim == "":
+		return
+	animation_player.play(kick_anim)
+	animation_player.seek(kick_contact_time, true)
+	skeleton.force_update_all_bone_transforms()
+	var toe := skeleton.global_transform * skeleton.get_bone_global_pose(skeleton.find_bone("mixamorig1RightToeBase")).origin
+	var forward := -global_transform.basis.z
+	_contact_offset = global_transform.basis.inverse() * (toe - global_position + forward * toe_to_ball)
+	_contact_offset.y = 0.0
+	animation_player.stop()
+
+## Stands the kicker so the kick animation hits the ball.
+func _place_behind_ball():
+	if ball and _contact_offset != Vector3.ZERO:
+		global_position = ball.global_position - global_transform.basis * _contact_offset
+		global_position.y = 0.0
 
 func _find_skeleton_and_anim_player():
 	if not skeleton:
@@ -96,6 +136,7 @@ func _process(delta: float):
 
 func start_aiming():
 	current_state = KickState.AIMING
+	_place_behind_ball()
 	_smooth_aim = Vector2.ZERO
 	power = 0.0
 	power_filling = true
@@ -171,34 +212,25 @@ func _release_kick():
 
 	current_state = KickState.RUN_UP
 	run_up_timer = 0.0
-	is_run_up_complete = false
 	is_kick_complete = false
 
 	kick_connecting.emit(final_power, final_target)
-	play_run_up()
 
 func _process_run_up(delta: float):
 	run_up_timer += delta
-	if run_up_timer >= run_up_duration * 0.7 and not is_kick_complete:
+	if run_up_timer >= run_up_duration and not is_kick_complete:
 		is_kick_complete = true
 		play_kick()
-		_enable_kick_ik()
+		if use_kick_ik:
+			_enable_kick_ik()
 
 	_check_animation_contact()
-
-	if run_up_timer >= run_up_duration and not is_run_up_complete:
-		is_run_up_complete = true
-		_on_run_up_complete()
 
 func _check_animation_contact():
 	if is_kick_complete and current_state != KickState.KICK_CONTACT and current_state != KickState.FOLLOW_THROUGH:
 		if animation_player and animation_player.is_playing():
-			var progress = animation_player.current_animation_position / animation_player.current_animation_length
-			if progress >= ball_contact_animation_progress:
+			if animation_player.current_animation_position >= kick_contact_time:
 				notify_animation_contact()
-
-func _on_run_up_complete():
-	pass
 
 func notify_animation_contact():
 	if current_state != KickState.KICK_CONTACT:
@@ -299,10 +331,6 @@ func play_idle():
 	if animation_player and animation_player.has_animation("Offensiveidle"):
 		animation_player.play("Offensiveidle")
 
-func play_run_up():
-	if animation_player and animation_player.has_animation("Jogforward"):
-		animation_player.play("Jogforward")
-
 func _kick_animation_name() -> String:
 	if animation_player.has_animation("Soccerpenaltykick"):
 		return "Soccerpenaltykick"
@@ -314,17 +342,15 @@ func _kick_animation_name() -> String:
 		return "Kicksoccerball"
 	return ""
 
-## Seconds from now until the foot hits the ball (run-up + kick animation up to
-## ball_contact_animation_progress). Used by the goalkeeper to start moving
+## Seconds from now until the foot hits the ball (pause + kick animation up to
+## kick_contact_time). Used by the goalkeeper to start moving
 ## before the kick, like a real keeper reading the shooter.
 func seconds_until_contact() -> float:
-	var kick_len := 0.0
-	if animation_player:
-		var kick_anim := _kick_animation_name()
-		if kick_anim != "":
-			kick_len = animation_player.get_animation(kick_anim).length
-	if current_state == KickState.RUN_UP and not is_kick_complete:
-		return maxf(0.0, run_up_duration * 0.7 - run_up_timer) + kick_len * ball_contact_animation_progress
+	if current_state == KickState.RUN_UP:
+		if not is_kick_complete:
+			return maxf(0.0, run_up_duration - run_up_timer) + kick_contact_time
+		if animation_player:
+			return maxf(0.0, kick_contact_time - animation_player.current_animation_position)
 	return 0.0
 
 ## Velocity the ball will get when kicked. Already fixed once the kick is
@@ -338,7 +364,7 @@ func play_kick():
 	var kick_anim := _kick_animation_name()
 
 	if kick_anim != "":
-		animation_player.play(kick_anim)
+		animation_player.play(kick_anim, 0.15)
 	else:
 		notify_animation_contact()
 

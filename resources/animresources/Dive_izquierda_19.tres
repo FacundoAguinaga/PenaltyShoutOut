@@ -9,4 +9,5 @@ zone = 6
 tipo = 1
 contact_time = 1.0667
 hand_bone = "mixamorig1RightHandMiddle1"
+despegue = 0.5666666666666667
 canonical_target = Vector3(-3.422149, 0.45299628, 0.2701273)

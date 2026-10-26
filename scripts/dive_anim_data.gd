@@ -18,6 +18,10 @@ enum Tipo { SAVE, DIVE }
 ## Segundo de la animacion en que la mano llega a la pelota.
 @export var contact_time: float
 @export var hand_bone: String = "mixamorig1RightHand"
+## Segundo en que el arquero despega (la cadera arranca rapido): lo de antes
+## es preparacion. Lo mide el bakeo. El arquero trata de despegar recien
+## cuando le patean.
+@export var despegue: float = 0.0
 ## Donde esta la mano en el contact_time, relativo al arquero. Lo calcula el
 ## bakeo (tools/bakear.tscn), no se escribe a mano.
 @export var canonical_target: Vector3

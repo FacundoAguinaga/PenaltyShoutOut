@@ -222,7 +222,16 @@ func _planear(origen: Vector3, velocidad: Vector3, t_extra: float) -> void:
 	# pasa: todavia va mas baja y mas al centro que en la linea de gol.
 	var en_manos := PredictionModule.punto_en_z(origen, velocidad, _base_position.z + anim.canonical_target.z)
 	_objetivo = en_manos.punto
-	var plan := TimingModule.planificar(anim, t_extra + en_manos.tiempo, error.delay_extra)
+	# Si se anticipa, se planea para que el arquero despegue con la patada y
+	# no antes: hasta la patada hace la preparacion a velocidad normal, y la
+	# estirada (del despegue al contacto) se acelera al patear
+	# (_resincronizar) para llegar con la pelota. Si la estirada es muy larga
+	# para acelerarla tanto, despega un poco antes.
+	var vuelo: float = en_manos.tiempo
+	if t_extra > 0.0:
+		var en_la_patada := maxf(anim.despegue, anim.contact_time - en_manos.tiempo * TimingModule.VELOCIDAD_MAXIMA)
+		vuelo = anim.contact_time - en_la_patada
+	var plan := TimingModule.planificar(anim, t_extra + vuelo, error.delay_extra)
 	print("[Goalkeeper] %s | zona elegida %s, real %s | %.1f m/s | %s | arranca en %.2f s desde %.2f s a %.2fx" % [
 		ResultModule.Resultado.keys()[_resultado], DiveAnimData.Zone.keys()[zona_elegida],
 		DiveAnimData.Zone.keys()[zona_real], velocidad.length(), anim.anim_name,

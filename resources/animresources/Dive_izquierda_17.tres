@@ -8,4 +8,5 @@ anim_name = "cascadeur/Dive_izquierda_17"
 tipo = 1
 contact_time = 1.0667
 hand_bone = "mixamorig1RightHandMiddle1"
+despegue = 0.6
 canonical_target = Vector3(-3.4595606, 2.0325217, 0.16886711)

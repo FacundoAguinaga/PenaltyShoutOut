@@ -8,4 +8,5 @@ anim_name = "cascadeur/Save_medio_arriba"
 zone = 1
 contact_time = 1.0333
 hand_bone = "mixamorig1LeftHandMiddle1"
+despegue = 0.6666666666666666
 canonical_target = Vector3(0.069615975, 2.4693425, 0.10004616)

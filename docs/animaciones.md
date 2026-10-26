@@ -63,14 +63,19 @@ más cercana de cualquier zona y se avisa por consola
 
 ### Que la mano llegue a tiempo (y se vea natural)
 
-El arquero **arranca cuando el pateador suelta el tiro** (empieza la carrera),
-no cuando sale la pelota: el tiro ya está definido en ese momento (fuerza y
-dirección), así que lo "lee" como un arquero de verdad (`anticipar()`, llamado
-desde `GameManager._on_kick_connecting`). De soltar a patear pasan 1,67 s
-(`PlayerKicker.seconds_until_contact()`), así que las animaciones se
-reproducen **enteras y a velocidad normal**, con la preparación incluida.
-Cuando se patea de verdad (`on_ball_kicked`) se ajusta la velocidad para que la
-mano llegue justo con la pelota (medido: ±2 cuadros).
+El arquero **arranca cuando el pateador suelta el tiro**, no cuando sale la
+pelota: el tiro ya está definido en ese momento (fuerza y dirección), así que
+lo "lee" como un arquero de verdad (`anticipar()`, llamado desde
+`GameManager._on_kick_connecting`). De soltar a patear pasan ~1,1 s (pausa de
+0,4 s + la carrera de la animación de patada hasta el golpe, 0,715 s;
+`PlayerKicker.seconds_until_contact()`).
+
+El plan hace que el arquero **despegue con la patada y no antes**: cada
+animación tiene su `despegue` (el cuadro en que la cadera arranca de costado o
+hacia arriba, lo mide el bakeo). Hasta la patada hace la preparación a
+velocidad normal; cuando se patea de verdad (`on_ball_kicked`) se acelera la
+estirada (hasta 1,8x) para que la mano llegue justo con la pelota. Si la
+estirada es demasiado larga para eso, despega un poco antes.
 
 Si la pelota se patea sin pasar por el pateador (por ejemplo en las pruebas),
 el arquero reacciona recién ahí y `TimingModule.planificar()` arranca la
@@ -112,33 +117,34 @@ jugar de verdad.**
 ## 4. Las 34 animaciones
 
 Zona asignada **por dónde toca la mano** (nudillos, medido en el modelo del
-juego). Contacto = cuadro de Cascadeur (30 fps, desde 0) en que los nudillos
-pasan más cerca del punto de referencia medido en Cascadeur.
+juego). Contacto = cuadro de Cascadeur (30 fps, desde 0): el primero en que
+los nudillos llegan a su punto (en las que después se deslizan con la mano
+quieta, el contacto es cuando llega, no cuando termina de deslizarse).
 
 | Animación | Tipo | Zona | Contacto | Mano en el contacto (x, y) m |
 |---|---|---|---|---|
 | Save_medio_arriba | SAVE | TOP_CENTER | 31 (1,03 s) | (0,07, 2,47) |
 | Save_medio_derecha_9 | SAVE | TOP_CENTER | 32 (1,07 s) | (0,31, 2,02) |
 | Save_medio_izquierda_9 | SAVE | TOP_CENTER | 32 (1,07 s) | (-0,32, 2,02) |
-| Save_medio_derecha_1 | SAVE | MID_CENTER | 39 (1,30 s) | (0,52, 1,57) |
-| Save_medio_izquierda_1 | SAVE | MID_CENTER | 39 (1,30 s) | (-0,53, 1,57) |
-| Save_medio_4 | SAVE | BOTTOM_CENTER | 33 (1,10 s) | (-0,14, 0,21) |
-| Save_derecha_11 | SAVE | BOTTOM_RIGHT | 45 (1,50 s) | (2,48, 0,21) |
-| Save_derecha_12 | SAVE | BOTTOM_RIGHT | 42 (1,40 s) | (2,49, 0,23) |
+| Save_medio_derecha_1 | SAVE | MID_CENTER | 35 (1,17 s) | (0,52, 1,57) |
+| Save_medio_izquierda_1 | SAVE | MID_CENTER | 35 (1,17 s) | (-0,53, 1,57) |
+| Save_medio_4 | SAVE | BOTTOM_CENTER | 30 (1,00 s) | (-0,14, 0,21) |
+| Save_derecha_11 | SAVE | BOTTOM_RIGHT | 44 (1,47 s) | (2,48, 0,21) |
+| Save_derecha_12 | SAVE | BOTTOM_RIGHT | 41 (1,37 s) | (2,49, 0,23) |
 | Save_derecha_13 | SAVE | BOTTOM_RIGHT | 34 (1,13 s) | (2,15, 0,25) |
 | Save_izquierda_11/12/13 | SAVE | BOTTOM_LEFT | 45 / 42 / 34 | espejo |
-| Dive_medio_arriba | DIVE | TOP_CENTER | 33 (1,10 s) | (-0,07, 2,53) |
-| Dive_medio_derecha_9 | DIVE | TOP_CENTER | 32 (1,07 s) | (0,28, 2,01) |
-| Dive_medio_izquierda_9 | DIVE | TOP_CENTER | 32 (1,07 s) | (-0,29, 2,02) |
-| Dive_medio | DIVE | MID_CENTER | 28 (0,93 s) | (0,09, 1,20) |
+| Dive_medio_arriba | DIVE | TOP_CENTER | 32 (1,07 s) | (-0,07, 2,53) |
+| Dive_medio_derecha_9 | DIVE | TOP_CENTER | 31 (1,03 s) | (0,28, 2,01) |
+| Dive_medio_izquierda_9 | DIVE | TOP_CENTER | 31 (1,03 s) | (-0,29, 2,02) |
+| Dive_medio | DIVE | MID_CENTER | 21 (0,70 s) | (0,09, 1,20) |
 | Dive_medio_derecha_1 / _2 | DIVE | MID_CENTER | 44 / 33 | (0,51, 1,59) / (0,54, 1,03) |
 | Dive_medio_izquierda_1 / _2 | DIVE | MID_CENTER | 44 / 33 | espejo |
 | Dive_derecha_11 | DIVE | MID_RIGHT | 38 (1,27 s) | (2,38, 0,84) |
 | Dive_izquierda_11 | DIVE | MID_LEFT | 38 (1,27 s) | (-2,39, 0,84) |
-| Dive_medio_derecha_3 | DIVE | BOTTOM_CENTER | 34 (1,13 s) | (0,69, 0,57) |
-| Dive_medio_izquierda_3 | DIVE | BOTTOM_CENTER | 34 (1,13 s) | (-0,69, 0,57) |
-| Dive_derecha_13 | DIVE | BOTTOM_RIGHT | 45 (1,50 s) | (2,28, 0,17) |
-| Dive_medio_derecha_12 | DIVE | BOTTOM_RIGHT | 44 (1,47 s) | (2,49, 0,14) |
+| Dive_medio_derecha_3 | DIVE | BOTTOM_CENTER | 31 (1,03 s) | (0,69, 0,57) |
+| Dive_medio_izquierda_3 | DIVE | BOTTOM_CENTER | 31 (1,03 s) | (-0,69, 0,57) |
+| Dive_derecha_13 | DIVE | BOTTOM_RIGHT | 40 (1,33 s) | (2,28, 0,17) |
+| Dive_medio_derecha_12 | DIVE | BOTTOM_RIGHT | 42 (1,40 s) | (2,49, 0,14) |
 | Dive_izquierda_13 / Dive_medio_izquierda_12 | DIVE | BOTTOM_LEFT | 46 / 44 | espejo |
 | Dive_derecha_17 | DIVE | TOP_RIGHT | 32 (1,07 s) | (3,46, 2,03) |
 | Dive_derecha_18 | DIVE | MID_RIGHT | 32 (1,07 s) | (3,37, 1,22) |

@@ -6,6 +6,7 @@
 script = ExtResource("1_script")
 anim_name = "cascadeur/Save_derecha_11"
 zone = 8
-contact_time = 1.5
+contact_time = 1.4667
 hand_bone = "mixamorig1LeftHandMiddle1"
-canonical_target = Vector3(2.4833598, 0.21399781, 0.4826622)
+despegue = 0.6333333333333333
+canonical_target = Vector3(2.5299683, 0.23393403, 0.4719696)
