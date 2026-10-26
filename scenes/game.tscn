@@ -10,11 +10,49 @@
 [ext_resource type="Resource" uid="uid://drbeiukmltpl6" path="res://resources/goalkeeper_stats_dificil.tres" id="8_0tnpc"]
 [ext_resource type="PackedScene" uid="uid://cbgydnrm0a6ol" path="res://scenes/ui.tscn" id="8_gee14"]
 [ext_resource type="Script" uid="uid://7uaasljwgtju" path="res://scripts/dive_anim_data.gd" id="9_ir15t"]
-[ext_resource type="Resource" uid="uid://cp4bwfoama07" path="res://resources/animresources/goalkeeperbodyblock(2).tres" id="10_ca42v"]
-[ext_resource type="Resource" uid="uid://bpey0rsclpcs2" path="res://resources/animresources/goalkeeperbodyblock.tres" id="11_rysoc"]
-[ext_resource type="Resource" uid="uid://clxph2fugjmyr" path="res://resources/animresources/Goalkeeperdivingsave(2).tres" id="12_ssvqc"]
-[ext_resource type="Resource" uid="uid://mswb8wwbr84v" path="res://resources/animresources/Goalkeeperdivingsave.tres" id="13_264po"]
-[ext_resource type="Resource" uid="uid://c1eej8y2lylk1" path="res://resources/animresources/goalkeeperpercatch.tres" id="14_1kice"]
+[ext_resource type="PackedScene" uid="uid://bhk5ihqu6i2ro" path="res://assets/stadium/estadios/Fst_Eng_001.FBX" id="20_stadium"]
+[ext_resource type="Material" path="res://assets/materials/pitch_material.tres" id="21_pitch"]
+[ext_resource type="Material" path="res://assets/materials/net_material.tres" id="22_net"]
+[ext_resource type="Material" path="res://assets/materials/pelota_material.tres" id="25_pelota"]
+[ext_resource type="Material" path="res://Player/kits/material_rojo.tres" id="26_kit_pateador"]
+[ext_resource type="Material" path="res://Player/kits/material_arquero.tres" id="27_kit_arquero"]
+[ext_resource type="Script" uid="uid://bg2wpgpnpg6f2" path="res://scripts/red_arco.gd" id="28_red_arco"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_derecha_11.tres" id="30_0"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_derecha_13.tres" id="30_1"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_11.tres" id="30_2"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_13.tres" id="30_3"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio.tres" id="30_4"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_arriba.tres" id="30_5"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_derecha_1.tres" id="30_6"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_derecha_12.tres" id="30_7"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_derecha_2.tres" id="30_8"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_derecha_3.tres" id="30_9"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_derecha_9.tres" id="30_10"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_izquierda_1.tres" id="30_11"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_izquierda_12.tres" id="30_12"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_izquierda_2.tres" id="30_13"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_izquierda_3.tres" id="30_14"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_medio_izquierda_9.tres" id="30_15"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_derecha_11.tres" id="30_16"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_derecha_12.tres" id="30_17"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_derecha_13.tres" id="30_18"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_izquierda_11.tres" id="30_19"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_izquierda_12.tres" id="30_20"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_izquierda_13.tres" id="30_21"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_medio_4.tres" id="30_22"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_medio_arriba.tres" id="30_23"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_medio_derecha_1.tres" id="30_24"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_medio_derecha_9.tres" id="30_25"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_medio_izquierda_1.tres" id="30_26"]
+[ext_resource type="Resource" path="res://resources/animresources/Save_medio_izquierda_9.tres" id="30_27"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_derecha_17.tres" id="30_28"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_derecha_18.tres" id="30_29"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_derecha_19.tres" id="30_30"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_17.tres" id="30_31"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_18.tres" id="30_32"]
+[ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_19.tres" id="30_33"]
+[ext_resource type="AnimationLibrary" path="res://Player/Animations/blender/arquero_blender.tres" id="29_lib_blender"]
+[ext_resource type="AnimationLibrary" path="res://Player/Animations/cascadeur_v2/arquero_cascadeur_v2.tres" id="31_lib_cascadeur"]
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_u5sy4"]
 ground_color = Color(0.95118266, 0.84504753, 0.8881973, 1)
@@ -25,8 +63,10 @@ sky_material = SubResource("PhysicalSkyMaterial_u5sy4")
 [sub_resource type="Environment" id="Environment_gee14"]
 background_mode = 2
 sky = SubResource("Sky_u5sy4")
+ambient_light_source = 2
+ambient_light_color = Color(0.62, 0.7, 0.85, 1)
+ambient_light_energy = 0.35
 tonemap_mode = 4
-ssao_enabled = true
 glow_enabled = true
 fog_sun_scatter = 1.0
 fog_density = 0.001
@@ -34,7 +74,14 @@ adjustment_enabled = true
 adjustment_saturation = 1.11
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
-size = Vector2(12, 28)
+size = Vector2(70, 106)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_cesped"]
+friction = 0.8
+bounce = 0.45
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_piso"]
+size = Vector3(80, 0.4, 116)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_goal"]
 size = Vector3(7.32, 2.44, 2)
@@ -21416,6 +21463,33 @@ height = 7.8242188
 radius = 0.125
 height = 7.8242188
 
+[sub_resource type="QuadMesh" id="QuadMesh_net_back"]
+size = Vector2(7.33, 2.445)
+subdivide_width = 28
+subdivide_depth = 12
+
+[sub_resource type="QuadMesh" id="QuadMesh_net_side"]
+size = Vector2(1.505, 2.445)
+subdivide_width = 8
+subdivide_depth = 12
+
+[sub_resource type="QuadMesh" id="QuadMesh_net_top"]
+size = Vector2(7.33, 1.505)
+subdivide_width = 28
+subdivide_depth = 8
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_red"]
+friction = 0.95
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_red_fondo"]
+size = Vector3(7.33, 2.445, 0.06)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_red_lateral"]
+size = Vector3(0.06, 2.445, 1.505)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_red_techo"]
+size = Vector3(7.33, 0.06, 1.505)
+
 [node name="Game" type="Node3D" unique_id=2106286525 node_paths=PackedStringArray("kicker", "goalkeeper", "ball", "goal_zone", "kicker_start_position", "goalkeeper_start_position", "ball_spawn_position")]
 script = ExtResource("1_game_mgr")
 kicker = NodePath("Kicker")
@@ -21425,10 +21499,9 @@ goal_zone = NodePath("World/GoalZone")
 kicker_start_position = NodePath("KickerSpawn")
 goalkeeper_start_position = NodePath("GoalkeeperSpawn")
 ball_spawn_position = NodePath("BallSpawn")
-shots_per_round = 5
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2138241990]
-transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 0.34, 0.94, 0, -0.94, 0.34, 0, 0, 0)
 shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1565271269]
@@ -21436,12 +21509,23 @@ environment = SubResource("Environment_gee14")
 
 [node name="World" type="Node3D" parent="." unique_id=1623218815]
 
+[node name="Stadium" parent="World" unique_id=2005013425 instance=ExtResource("20_stadium")]
+transform = Transform3D(0.03502, 0, 0, 0, 0.03502, 0, 0, 0, 0.03502, 0, -204.86, 41.5)
+
 [node name="Ground" type="MeshInstance3D" parent="World" unique_id=1395891220]
-transform = Transform3D(6, 0, 0, 0, 1, 0, 0, 0, 14, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 42)
 mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = ExtResource("21_pitch")
+
+[node name="PisoCuerpo" type="StaticBody3D" parent="World" unique_id=810635214]
+physics_material_override = SubResource("PhysicsMaterial_cesped")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="World/PisoCuerpo" unique_id=181340459]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 37)
+shape = SubResource("BoxShape3D_piso")
 
 [node name="GoalZone" type="Area3D" parent="World" unique_id=2022118214]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.22, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.22, -12.22)
 script = ExtResource("5_goal_sc")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="World/GoalZone" unique_id=1833457289]
@@ -21456,6 +21540,7 @@ shape = SubResource("SphereShape3D_ball")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Ball" unique_id=1276248945]
 mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = ExtResource("25_pelota")
 
 [node name="KickerSpawn" type="Marker3D" parent="." unique_id=158326130]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
@@ -22044,7 +22129,7 @@ bones/29/bone_meta/extras = {
 "elements": [0.9986282969030584, 0.04719079137227389, 0.02268378024543173, 0.0, -0.04963184564646702, 0.991166219680019, 0.12298863849258568, 0.0, -0.01667946564760968, -0.12394577245793088, 0.9921487999355412, 0.0, 0.0, 13.051577503223086, 3.506162e-08, 1.0]
 },
 "preRotation": [-74.55887013740912, -88.37251281903984, 179.7740327367789],
-"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467e-16],
+"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467000000002e-16],
 "scale": [1.0, 1.0, 1.0000000000000002],
 "translation": [-6.140155, 12.993736969446786, -0.17591274324467143]
 }
@@ -22887,7 +22972,7 @@ metadata/extras = {
 },
 "preRotation": [-1.1249357591627017e-08, -1.2479950172461492e-14, 7.95138686946277e-16],
 "scale": [1.0, 1.0000000000000002, 1.0000000000000002],
-"translation": [2.7475544e-08, 6.205877901587188, 2.065804194373299e-09]
+"translation": [2.7475544e-08, 6.205877901587188, 2.0658041943732992e-09]
 }
 }
 
@@ -22895,6 +22980,7 @@ metadata/extras = {
 mesh = SubResource("ArrayMesh_xrn8n")
 skin = SubResource("Skin_ttpdt")
 skeleton = NodePath("..")
+surface_material_override/0 = ExtResource("26_kit_pateador")
 metadata/extras = {
 "transformData": {
 "eulerOrder": "ZYX",
@@ -22931,7 +23017,8 @@ skeleton = NodePath("player/Node/Skeleton3D")
 left_hand_ik = NodePath("player/Node/Skeleton3D/LeftHandIK")
 right_hand_ik = NodePath("player/Node/Skeleton3D/RightHandIK")
 ball = NodePath("../Ball")
-libreria_animaciones = Array[ExtResource("9_ir15t")]([ExtResource("10_ca42v"), ExtResource("11_rysoc"), ExtResource("12_ssvqc"), ExtResource("13_264po"), ExtResource("14_1kice")])
+siempre_adivina = true
+libreria_animaciones = Array[ExtResource("9_ir15t")]([ExtResource("30_0"), ExtResource("30_1"), ExtResource("30_2"), ExtResource("30_3"), ExtResource("30_4"), ExtResource("30_5"), ExtResource("30_6"), ExtResource("30_7"), ExtResource("30_8"), ExtResource("30_9"), ExtResource("30_10"), ExtResource("30_11"), ExtResource("30_12"), ExtResource("30_13"), ExtResource("30_14"), ExtResource("30_15"), ExtResource("30_16"), ExtResource("30_17"), ExtResource("30_18"), ExtResource("30_19"), ExtResource("30_20"), ExtResource("30_21"), ExtResource("30_22"), ExtResource("30_23"), ExtResource("30_24"), ExtResource("30_25"), ExtResource("30_26"), ExtResource("30_27"), ExtResource("30_28"), ExtResource("30_29"), ExtResource("30_30"), ExtResource("30_31"), ExtResource("30_32"), ExtResource("30_33")])
 
 [node name="player" type="Node3D" parent="Goalkeeper" unique_id=1362771372]
 transform = Transform3D(-0.01, 0, 0, 0, 0.01, 0, 0, 0, -0.01, 0, 0.9086895, -0.07175255)
@@ -23499,7 +23586,7 @@ bones/29/bone_meta/extras = {
 "elements": [0.9986282969030584, 0.04719079137227389, 0.02268378024543173, 0.0, -0.04963184564646702, 0.991166219680019, 0.12298863849258568, 0.0, -0.01667946564760968, -0.12394577245793088, 0.9921487999355412, 0.0, 0.0, 13.051577503223086, 3.506162e-08, 1.0]
 },
 "preRotation": [-74.55887013740912, -88.37251281903984, 179.7740327367789],
-"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467e-16],
+"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467000000002e-16],
 "scale": [1.0, 1.0, 1.0000000000000002],
 "translation": [-6.140155, 12.993736969446786, -0.17591274324467143]
 }
@@ -24342,7 +24429,7 @@ metadata/extras = {
 },
 "preRotation": [-1.1249357591627017e-08, -1.2479950172461492e-14, 7.95138686946277e-16],
 "scale": [1.0, 1.0000000000000002, 1.0000000000000002],
-"translation": [2.7475544e-08, 6.205877901587188, 2.065804194373299e-09]
+"translation": [2.7475544e-08, 6.205877901587188, 2.0658041943732992e-09]
 }
 }
 
@@ -24350,6 +24437,7 @@ metadata/extras = {
 mesh = SubResource("ArrayMesh_xrn8n")
 skin = SubResource("Skin_ttpdt")
 skeleton = NodePath("..")
+surface_material_override/0 = ExtResource("27_kit_arquero")
 metadata/extras = {
 "transformData": {
 "eulerOrder": "ZYX",
@@ -24585,6 +24673,8 @@ shape = SubResource("SphereShape3D_qxvco")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Goalkeeper/player" unique_id=1643788904]
 libraries/ = SubResource("AnimationLibrary_bst31")
+libraries/blender = ExtResource("29_lib_blender")
+libraries/cascadeur = ExtResource("31_lib_cascadeur")
 
 [node name="AnimationTree" type="AnimationTree" parent="Goalkeeper" unique_id=254629001]
 active = false
@@ -24620,6 +24710,49 @@ mesh = SubResource("CylinderMesh_u5sy4")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="travesaño/StaticBody3D" unique_id=2145053857]
 shape = SubResource("CapsuleShape3D_gee14")
+
+[node name="RedArco" type="Node3D" parent="." unique_id=377610255 node_paths=PackedStringArray("pelota")]
+script = ExtResource("28_red_arco")
+pelota = NodePath("../Ball")
+
+[node name="Fondo" type="MeshInstance3D" parent="RedArco" unique_id=1763689417]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2225, -12.5)
+mesh = SubResource("QuadMesh_net_back")
+surface_material_override/0 = ExtResource("22_net")
+
+[node name="LateralIzq" type="MeshInstance3D" parent="RedArco" unique_id=815018242]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.665, 1.2225, -11.7475)
+mesh = SubResource("QuadMesh_net_side")
+surface_material_override/0 = ExtResource("22_net")
+
+[node name="LateralDer" type="MeshInstance3D" parent="RedArco" unique_id=521039710]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.665, 1.2225, -11.7475)
+mesh = SubResource("QuadMesh_net_side")
+surface_material_override/0 = ExtResource("22_net")
+
+[node name="Techo" type="MeshInstance3D" parent="RedArco" unique_id=1199663885]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2.4449, -11.7475)
+mesh = SubResource("QuadMesh_net_top")
+surface_material_override/0 = ExtResource("22_net")
+
+[node name="Cuerpo" type="StaticBody3D" parent="RedArco" unique_id=1472196951]
+physics_material_override = SubResource("PhysicsMaterial_red")
+
+[node name="ColFondo" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1170290550]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2225, -12.5)
+shape = SubResource("BoxShape3D_red_fondo")
+
+[node name="ColLateralIzq" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1434219225]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.665, 1.2225, -11.7475)
+shape = SubResource("BoxShape3D_red_lateral")
+
+[node name="ColLateralDer" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1249210158]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.665, 1.2225, -11.7475)
+shape = SubResource("BoxShape3D_red_lateral")
+
+[node name="ColTecho" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1817652166]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4449, -11.7475)
+shape = SubResource("BoxShape3D_red_techo")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=802062612]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 2)

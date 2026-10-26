@@ -1,0 +1,43 @@
+[gd_resource type="AnimationLibrary" load_steps=19 format=3]
+
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_left_up.res" id="1_save_left_up"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_center_up.res" id="2_save_center_up"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_right_up.res" id="3_save_right_up"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_left_mid.res" id="4_save_left_mid"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_center_mid.res" id="5_save_center_mid"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_right_mid.res" id="6_save_right_mid"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_left_down.res" id="7_save_left_down"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_center_down.res" id="8_save_center_down"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/save_right_down.res" id="9_save_right_down"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_left_up.res" id="10_dive_left_up"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_center_up.res" id="11_dive_center_up"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_right_up.res" id="12_dive_right_up"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_left_mid.res" id="13_dive_left_mid"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_center_mid.res" id="14_dive_center_mid"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_right_mid.res" id="15_dive_right_mid"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_left_down.res" id="16_dive_left_down"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_center_down.res" id="17_dive_center_down"]
+[ext_resource type="Animation" path="res://Player/Animations/blender/dive_right_down.res" id="18_dive_right_down"]
+
+[resource]
+resource_name = "blender"
+_data = {
+&"save_left_up": ExtResource("1_save_left_up"),
+&"save_center_up": ExtResource("2_save_center_up"),
+&"save_right_up": ExtResource("3_save_right_up"),
+&"save_left_mid": ExtResource("4_save_left_mid"),
+&"save_center_mid": ExtResource("5_save_center_mid"),
+&"save_right_mid": ExtResource("6_save_right_mid"),
+&"save_left_down": ExtResource("7_save_left_down"),
+&"save_center_down": ExtResource("8_save_center_down"),
+&"save_right_down": ExtResource("9_save_right_down"),
+&"dive_left_up": ExtResource("10_dive_left_up"),
+&"dive_center_up": ExtResource("11_dive_center_up"),
+&"dive_right_up": ExtResource("12_dive_right_up"),
+&"dive_left_mid": ExtResource("13_dive_left_mid"),
+&"dive_center_mid": ExtResource("14_dive_center_mid"),
+&"dive_right_mid": ExtResource("15_dive_right_mid"),
+&"dive_left_down": ExtResource("16_dive_left_down"),
+&"dive_center_down": ExtResource("17_dive_center_down"),
+&"dive_right_down": ExtResource("18_dive_right_down")
+}

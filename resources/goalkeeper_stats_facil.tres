@@ -8,3 +8,4 @@ reflexes = 30.0
 reaction_time = 0.35
 reach = 30.0
 dive_speed = 40.0
+velocidad_max_atajar = 20.0

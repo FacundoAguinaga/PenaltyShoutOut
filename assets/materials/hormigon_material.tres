@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "HormigonMaterial"
+albedo_color = Color(0.4, 0.41, 0.43, 1)
+roughness = 0.95
+metallic_specular = 0.15

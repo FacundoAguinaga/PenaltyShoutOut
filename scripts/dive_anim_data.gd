@@ -7,12 +7,20 @@ enum Zone {
 	BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT
 }
 
+## SAVE: el arquero agarra la pelota. DIVE: se tira; segun la jugada la pelota
+## le rebota en las manos (tiro fuerte) o entra (se tiro a otra zona).
+## Los valores (0 y 1) son los mismos que tenian ATAJADA y FALLO.
+enum Tipo { SAVE, DIVE }
+
 @export var anim_name: String
 @export var zone: Zone
+@export var tipo: Tipo = Tipo.SAVE
+## Segundo de la animacion en que la mano llega a la pelota.
 @export var contact_time: float
 @export var hand_bone: String = "mixamorig1RightHand"
+## Donde esta la mano en el contact_time, relativo al arquero. Lo calcula el
+## bakeo (tools/bakear.tscn), no se escribe a mano.
 @export var canonical_target: Vector3
-@export var max_offset_permitido: float = 1.0
 
 # El AnimSelector estará dentro de una clase estática interna o en el mismo archivo para simplificar
 class AnimSelector:
@@ -42,23 +50,25 @@ class AnimSelector:
 		]
 		return matrix[vertical][horizontal]
 
-	static func elegir_animacion(target_percibido: Vector2, libreria: Array[DiveAnimData], goal_width: float, goal_height: float) -> DiveAnimData:
-		var zona := clasificar_zona(target_percibido, goal_width, goal_height)
-		var candidatas := libreria.filter(func(a): return a.zone == zona)
-		
-		# Fallback: si no hay animación exacta para esa zona, devolvemos la primera (deberíamos tener al menos 1 por zona idealmente)
-		var elegida: DiveAnimData
-		if candidatas.size() > 0:
-			elegida = candidatas[0]
-		else:
-			# Busca la más cercana o simplemente la primera de la librería si no hay
-			if libreria.size() > 0:
-				elegida = libreria[0]
-			else:
-				return null
-				
-		var offset := target_percibido - Vector2(elegida.canonical_target.x, elegida.canonical_target.y)
-		elegida.set_meta("offset_actual", offset)
-		elegida.set_meta("alcanzable", offset.length() <= elegida.max_offset_permitido)
-		
-		return elegida
+	## Elige la animacion de un tipo para una zona: entre las de esa zona, la
+	## que toca mas cerca del punto (x, y) por donde pasa la pelota. Si la
+	## zona no tiene ninguna de ese tipo, la mas cercana de cualquier zona
+	## (y lo avisa, porque el arquero va a tener que correrse mucho).
+	static func elegir(libreria: Array[DiveAnimData], zona: Zone, tipo: DiveAnimData.Tipo, punto: Vector2) -> DiveAnimData:
+		var mejor := _mas_cercana(libreria.filter(func(a): return a != null and a.zone == zona and a.tipo == tipo), punto)
+		if mejor:
+			return mejor
+		mejor = _mas_cercana(libreria.filter(func(a): return a != null and a.tipo == tipo), punto)
+		if mejor:
+			print("[AnimSelector] Zona %s sin %s: uso %s (la mas cercana)" % [Zone.keys()[zona], Tipo.keys()[tipo], mejor.anim_name])
+		return mejor
+
+	static func _mas_cercana(candidatas: Array, punto: Vector2) -> DiveAnimData:
+		var mejor: DiveAnimData = null
+		var mejor_d := INF
+		for a in candidatas:
+			var d := punto.distance_to(Vector2(a.canonical_target.x, a.canonical_target.y))
+			if d < mejor_d:
+				mejor_d = d
+				mejor = a
+		return mejor

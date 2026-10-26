@@ -1,0 +1,74 @@
+[gd_resource type="AnimationLibrary" format=3]
+
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_derecha_11.res" id="1_lskh1"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_derecha_13.res" id="2_7aebc"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_izquierda_11.res" id="3_qsnle"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_derecha_17.res" id="3_tnqoc"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_derecha_18.res" id="4_lp36v"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_izquierda_13.res" id="4_uqj47"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_derecha_19.res" id="5_5aemb"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio.res" id="5_hlwkn"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_arriba.res" id="6_57ehd"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_derecha_1.res" id="7_tnqoc"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_izquierda_17.res" id="8_drjj7"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_derecha_12.res" id="8_lp36v"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_derecha_2.res" id="9_5aemb"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_izquierda_18.res" id="9_qi1oa"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_derecha_3.res" id="10_drjj7"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_izquierda_19.res" id="10_qv5bt"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_derecha_9.res" id="11_qi1oa"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_izquierda_1.res" id="12_qv5bt"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_izquierda_12.res" id="13_vioap"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_izquierda_2.res" id="14_mr7xs"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_izquierda_3.res" id="15_dbu2j"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Dive_medio_izquierda_9.res" id="16_lp5cf"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_derecha_11.res" id="17_pknsh"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_derecha_12.res" id="18_3akm7"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_derecha_13.res" id="19_3ecrc"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_izquierda_11.res" id="20_v0vhd"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_izquierda_12.res" id="21_qrsq4"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_izquierda_13.res" id="22_s5wh3"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_medio_4.res" id="23_54w4r"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_medio_arriba.res" id="24_0mmm5"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_medio_derecha_1.res" id="25_a0ywv"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_medio_derecha_9.res" id="26_y4d7s"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_medio_izquierda_1.res" id="27_sfpbm"]
+[ext_resource type="Animation" path="res://Player/Animations/cascadeur_v2/Save_medio_izquierda_9.res" id="28_6ct0j"]
+
+[resource]
+_data = {
+&"Dive_derecha_11": ExtResource("1_lskh1"),
+&"Dive_derecha_13": ExtResource("2_7aebc"),
+&"Dive_derecha_17": ExtResource("3_tnqoc"),
+&"Dive_derecha_18": ExtResource("4_lp36v"),
+&"Dive_derecha_19": ExtResource("5_5aemb"),
+&"Dive_izquierda_11": ExtResource("3_qsnle"),
+&"Dive_izquierda_13": ExtResource("4_uqj47"),
+&"Dive_izquierda_17": ExtResource("8_drjj7"),
+&"Dive_izquierda_18": ExtResource("9_qi1oa"),
+&"Dive_izquierda_19": ExtResource("10_qv5bt"),
+&"Dive_medio": ExtResource("5_hlwkn"),
+&"Dive_medio_arriba": ExtResource("6_57ehd"),
+&"Dive_medio_derecha_1": ExtResource("7_tnqoc"),
+&"Dive_medio_derecha_12": ExtResource("8_lp36v"),
+&"Dive_medio_derecha_2": ExtResource("9_5aemb"),
+&"Dive_medio_derecha_3": ExtResource("10_drjj7"),
+&"Dive_medio_derecha_9": ExtResource("11_qi1oa"),
+&"Dive_medio_izquierda_1": ExtResource("12_qv5bt"),
+&"Dive_medio_izquierda_12": ExtResource("13_vioap"),
+&"Dive_medio_izquierda_2": ExtResource("14_mr7xs"),
+&"Dive_medio_izquierda_3": ExtResource("15_dbu2j"),
+&"Dive_medio_izquierda_9": ExtResource("16_lp5cf"),
+&"Save_derecha_11": ExtResource("17_pknsh"),
+&"Save_derecha_12": ExtResource("18_3akm7"),
+&"Save_derecha_13": ExtResource("19_3ecrc"),
+&"Save_izquierda_11": ExtResource("20_v0vhd"),
+&"Save_izquierda_12": ExtResource("21_qrsq4"),
+&"Save_izquierda_13": ExtResource("22_s5wh3"),
+&"Save_medio_4": ExtResource("23_54w4r"),
+&"Save_medio_arriba": ExtResource("24_0mmm5"),
+&"Save_medio_derecha_1": ExtResource("25_a0ywv"),
+&"Save_medio_derecha_9": ExtResource("26_y4d7s"),
+&"Save_medio_izquierda_1": ExtResource("27_sfpbm"),
+&"Save_medio_izquierda_9": ExtResource("28_6ct0j")
+}

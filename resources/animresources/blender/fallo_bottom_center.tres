@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DiveAnimData" format=3]
+
+[ext_resource type="Script" path="res://scripts/dive_anim_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+anim_name = "blender/dive_center_down"
+zone = 7
+tipo = 1
+contact_time = 1.1
+canonical_target = Vector3(-0.2711, 0.7685097, 0.45858097)

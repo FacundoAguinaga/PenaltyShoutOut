@@ -1,13 +1,23 @@
 class_name ResultModule
 extends RefCounted
 
-static func evaluar_resultado(anim: DiveAnimData) -> bool:
-	if not anim.has_meta("alcanzable"):
-		return false
-		
-	if not anim.get_meta("alcanzable"):
-		return false
+## Como termina la jugada.
+##   GOL:    el arquero se tiro a otra zona (animacion DIVE de la zona que eligio).
+##   ATAJA:  acerto la zona y el tiro no es muy fuerte: la agarra (SAVE).
+##   REBOTE: acerto la zona pero el tiro es fuerte: la tapa y rebota (DIVE).
+enum Resultado { GOL, ATAJA, REBOTE }
 
-	var offset: Vector2 = anim.get_meta("offset_actual")
-	var margen_extra := randf() * 0.15
-	return offset.length() <= (anim.max_offset_permitido - margen_extra)
+## Se resuelve ANTES de arrancar la animacion, no despues del contacto. Si no,
+## la animacion podria mentir: el azar daria vuelta el desenlace cuando el
+## arquero ya esta reproduciendo una atajada.
+##
+## zona_elegida: la que eligio el arquero (con su error de percepcion).
+## zona_real: por donde va la pelota de verdad.
+## velocidad_max_atajar: hasta que velocidad (m/s) la puede agarrar; sale de
+## GoalkeeperStats segun la dificultad.
+static func decidir(zona_elegida: DiveAnimData.Zone, zona_real: DiveAnimData.Zone, velocidad: float, velocidad_max_atajar: float) -> Resultado:
+	if zona_elegida != zona_real:
+		return Resultado.GOL
+	if velocidad <= velocidad_max_atajar:
+		return Resultado.ATAJA
+	return Resultado.REBOTE

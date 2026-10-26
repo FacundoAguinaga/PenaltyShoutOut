@@ -97,6 +97,14 @@ func reset_to(pos: Vector3):
 	global_position = pos
 	_prev_z = pos.z
 
+## El arquero la agarra: deja de moverse sola y de contar como en juego (el
+## arquero la va moviendo con las manos). reset_to() la vuelve a soltar.
+func agarrar():
+	is_in_play = false
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	freeze = true
+
 func _apply_air_resistance():
 	linear_velocity *= air_resistance
 	angular_velocity *= spin_decay

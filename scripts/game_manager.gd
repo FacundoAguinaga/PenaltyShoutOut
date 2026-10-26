@@ -20,6 +20,9 @@ enum PenaltyState {
 @export_group("Game Settings")
 @export var shots_per_round: int = 5
 @export var turn_timeout: float = 30.0
+## Dibuja un rectangulo rojo en la boca del arco para verificar la alineacion.
+## Solo para debug: tapa la vista del arco durante el juego.
+@export var show_debug_goal: bool = false
 
 var current_state: PenaltyState = PenaltyState.IDLE
 var kicker_score: int = 0
@@ -43,7 +46,8 @@ func _ready():
 	_auto_discover_nodes()
 	_connect_signals()
 	_apply_goalkeeper_difficulty()
-	_draw_debug_goal()
+	if show_debug_goal:
+		_draw_debug_goal()
 	start_penalty()
 
 func _apply_settings():
@@ -143,6 +147,9 @@ func reset_positions():
 
 func _on_kick_connecting(power: float, kick_target: Vector3):
 	kick_released.emit(power, kick_target)
+	# The keeper starts reading the shot as the shooter starts the run-up.
+	if goalkeeper and kicker and ball and goalkeeper.has_method("anticipar"):
+		goalkeeper.anticipar(ball.global_position, kicker.shot_velocity(), kicker.seconds_until_contact())
 
 func _on_ball_launch_requested(velocity: Vector3):
 	if ball:

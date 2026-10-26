@@ -303,18 +303,39 @@ func play_run_up():
 	if animation_player and animation_player.has_animation("Jogforward"):
 		animation_player.play("Jogforward")
 
+func _kick_animation_name() -> String:
+	if animation_player.has_animation("Soccerpenaltykick"):
+		return "Soccerpenaltykick"
+	elif final_target.x < -0.5 and animation_player.has_animation("Kicksoccerball"):
+		return "Kicksoccerball"
+	elif final_target.x > 0.5 and animation_player.has_animation("Kicksoccerball(2)"):
+		return "Kicksoccerball(2)"
+	elif animation_player.has_animation("Kicksoccerball"):
+		return "Kicksoccerball"
+	return ""
+
+## Seconds from now until the foot hits the ball (run-up + kick animation up to
+## ball_contact_animation_progress). Used by the goalkeeper to start moving
+## before the kick, like a real keeper reading the shooter.
+func seconds_until_contact() -> float:
+	var kick_len := 0.0
+	if animation_player:
+		var kick_anim := _kick_animation_name()
+		if kick_anim != "":
+			kick_len = animation_player.get_animation(kick_anim).length
+	if current_state == KickState.RUN_UP and not is_kick_complete:
+		return maxf(0.0, run_up_duration * 0.7 - run_up_timer) + kick_len * ball_contact_animation_progress
+	return 0.0
+
+## Velocity the ball will get when kicked. Already fixed once the kick is
+## released (final_power and final_target don't change during the run-up).
+func shot_velocity() -> Vector3:
+	return _calculate_ball_velocity()
+
 func play_kick():
 	if not animation_player:
 		return
-	var kick_anim: String = ""
-	if animation_player.has_animation("Soccerpenaltykick"):
-		kick_anim = "Soccerpenaltykick"
-	elif final_target.x < -0.5 and animation_player.has_animation("Kicksoccerball"):
-		kick_anim = "Kicksoccerball"
-	elif final_target.x > 0.5 and animation_player.has_animation("Kicksoccerball(2)"):
-		kick_anim = "Kicksoccerball(2)"
-	elif animation_player.has_animation("Kicksoccerball"):
-		kick_anim = "Kicksoccerball"
+	var kick_anim := _kick_animation_name()
 
 	if kick_anim != "":
 		animation_player.play(kick_anim)

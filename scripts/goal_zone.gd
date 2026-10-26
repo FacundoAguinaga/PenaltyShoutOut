@@ -5,6 +5,10 @@ class_name GoalZone
 @export var goal_height: float = 2.44
 @export var goal_depth: float = 2.0
 
+## La zona empieza un diametro de pelota (22 cm) detras de la linea de gol
+## (z = -11): avisa cuando la pelota la toca, y es gol recien cuando cruzo la
+## linea entera. Si empezara en la linea, una pelota que pega en el palo y
+## queda rozando la linea por delante contaria como gol.
 var is_goal_side: bool = true
 
 signal goal_detected

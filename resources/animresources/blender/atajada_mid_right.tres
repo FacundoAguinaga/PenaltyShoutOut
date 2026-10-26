@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="DiveAnimData" format=3]
+
+[ext_resource type="Script" path="res://scripts/dive_anim_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+anim_name = "blender/save_right_mid"
+zone = 5
+contact_time = 1.1
+canonical_target = Vector3(2.2715895, 1.2197421, 1.9035683)

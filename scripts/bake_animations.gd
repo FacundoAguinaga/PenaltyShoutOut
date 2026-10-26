@@ -27,7 +27,7 @@ func _run() -> void:
 		return
 
 	# Busca todos los recursos DiveAnimData en la carpeta especificada
-	var dir_path := "res://resources/animations/dive_data"
+	var dir_path := "res://resources/animresources"
 	var dir = DirAccess.open(dir_path)
 	if not dir:
 		print("ERROR: No se encontró la carpeta ", dir_path, ". Créala y pon tus recursos ahí.")

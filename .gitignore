@@ -1,3 +1,13 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Archivos de trabajo de Cascadeur: ~28 MB cada uno porque incluyen la malla.
+# Son puntos de partida para animar, no resultados: no van al repositorio.
+Player/Animations/cascadeur/*.casc
+
+# copias de respaldo que genera Blender al guardar
+*.blend1
+
+# Texturas que extrae Cascadeur al importar el modelo: el juego usa Player/kits/
+Player/Ch36_nonPBR.fbm/

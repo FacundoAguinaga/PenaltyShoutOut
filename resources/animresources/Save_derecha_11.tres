@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DiveAnimData" format=3]
+
+[ext_resource type="Script" path="res://scripts/dive_anim_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+anim_name = "cascadeur/Save_derecha_11"
+zone = 8
+contact_time = 1.5
+hand_bone = "mixamorig1LeftHandMiddle1"
+canonical_target = Vector3(2.4833598, 0.21399781, 0.4826622)

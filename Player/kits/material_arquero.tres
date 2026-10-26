@@ -1,0 +1,12 @@
+[gd_resource type="StandardMaterial3D" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://Player/kits/kit_arquero.png" id="1_kit"]
+[ext_resource type="Texture2D" path="res://Player/cac-1784590690052_1.png" id="2_normal"]
+
+[resource]
+resource_name = "Kit_arquero"
+albedo_texture = ExtResource("1_kit")
+metallic = 0.0
+roughness = 0.75
+normal_enabled = true
+normal_texture = ExtResource("2_normal")
