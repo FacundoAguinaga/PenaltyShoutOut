@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://e0uuvcql7hqe"
+path="res://.godot/imported/TunePocket-Vuvuzela-Blast-2-Preview (mp3cut.net).mp3-76b12b3ad969891fe0a8cc0456227e3c.mp3str"
+
+[deps]
+
+source_file="res://audio/adjuntos/TunePocket-Vuvuzela-Blast-2-Preview (mp3cut.net).mp3"
+dest_files=["res://.godot/imported/TunePocket-Vuvuzela-Blast-2-Preview (mp3cut.net).mp3-76b12b3ad969891fe0a8cc0456227e3c.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,21 @@
+[gd_resource type="Environment" format=3 uid="uid://env_stadium_tres"]
+
+[resource]
+background_mode = 1
+background_color = Color(0.015, 0.02, 0.05, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.12, 0.15, 0.22, 1)
+ambient_light_energy = 0.8
+tonemap_mode = 3
+tonemap_exposure = 1.05
+ssao_enabled = true
+glow_enabled = true
+glow_intensity = 0.8
+glow_strength = 1.0
+glow_bloom = 0.25
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.006
+volumetric_fog_albedo = Color(0.8, 0.88, 1, 1)
+volumetric_fog_emission = Color(0.02, 0.04, 0.08, 1)
+adjustment_enabled = true
+adjustment_saturation = 1.11

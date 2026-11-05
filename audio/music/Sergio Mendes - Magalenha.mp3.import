@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://cv1qyknwn3y8g"
+path="res://.godot/imported/Sergio Mendes - Magalenha.mp3-d13c14133b852bb47b4caff7abd97713.mp3str"
+
+[deps]
+
+source_file="res://audio/music/Sergio Mendes - Magalenha.mp3"
+dest_files=["res://.godot/imported/Sergio Mendes - Magalenha.mp3-d13c14133b852bb47b4caff7abd97713.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

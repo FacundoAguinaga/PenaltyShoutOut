@@ -12,6 +12,9 @@ enum GKState { IDLE, ANTICIPATING, DIVING, RESULT, RECOVERING, RESET }
 @export var ball: SoccerBall
 
 @export_group("System Config")
+## Error de percepcion si no hay GoalkeeperStats. Con stats asignados manda
+## stats.error_percepcion (la dificultad elegida en el menu); si no, esto
+## pisaria la dificultad con el valor de la escena.
 @export var dificultad: float = 0.4
 ## Para probar: el arquero siempre elige la zona correcta y reacciona sin
 ## demora (nunca es gol por tirarse al otro lado). Apagarlo para jugar.
@@ -190,7 +193,7 @@ func _planear(origen: Vector3, velocidad: Vector3, t_extra: float) -> void:
 		# Va afuera, nos quedamos quietos o simulamos reacción tardía/corta
 		return
 
-	var error := ErrorModule.aplicar_error(prediccion.target, dificultad)
+	var error := ErrorModule.aplicar_error(prediccion.target, stats.error_percepcion if stats else dificultad)
 	if siempre_adivina:
 		error = {"target_percibido": prediccion.target, "delay_extra": 0.0}
 

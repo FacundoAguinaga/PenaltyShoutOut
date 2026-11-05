@@ -11,3 +11,8 @@ Player/Animations/cascadeur/*.casc
 
 # Texturas que extrae Cascadeur al importar el modelo: el juego usa Player/kits/
 Player/Ch36_nonPBR.fbm/
+
+# Superan el limite de 100 MB por archivo de GitHub. stadium_optimizado.scn se
+# genera desde stadium.glb con tools/optimizar_estadio.gd.
+assets/models/stadium.glb
+assets/models/stadium_optimizado.scn

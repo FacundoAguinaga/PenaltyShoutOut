@@ -1,0 +1,8 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://va8blqb6funo"]
+
+[ext_resource type="Texture2D" uid="uid://cdkvsoxxomjmt" path="res://assets/models/people/tribuna 2 lod 3.png" id="1_gooli"]
+
+[resource]
+transparency = 1
+cull_mode = 2
+albedo_texture = ExtResource("1_gooli")

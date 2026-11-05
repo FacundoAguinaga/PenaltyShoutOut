@@ -16,6 +16,7 @@ enum PenaltyState {
 @export var kicker_start_position: Marker3D
 @export var goalkeeper_start_position: Marker3D
 @export var ball_spawn_position: Marker3D
+@export var sound_manager: Node
 
 @export_group("Game Settings")
 @export var shots_per_round: int = 5
@@ -92,6 +93,12 @@ func _auto_discover_nodes():
 		goal_zone = get_node_or_null("World/GoalZone") as GoalZone
 	if not goal_zone:
 		goal_zone = _find_node_by_type(self, GoalZone) as GoalZone
+	if not sound_manager:
+		sound_manager = get_node_or_null("/root/SoundManager")
+		if not sound_manager:
+			sound_manager = get_node_or_null("SoundManager")
+		if not sound_manager:
+			sound_manager = _find_node_by_type(self, SoundManager)
 
 func _find_node_by_type(node: Node, type) -> Node:
 	if is_instance_of(node, type):
@@ -147,6 +154,8 @@ func reset_positions():
 
 func _on_kick_connecting(power: float, kick_target: Vector3):
 	kick_released.emit(power, kick_target)
+	if sound_manager and sound_manager.has_method("play_anticipation"):
+		sound_manager.play_anticipation()
 	# The keeper starts reading the shot as the shooter starts the run-up.
 	if goalkeeper and kicker and ball and goalkeeper.has_method("anticipar"):
 		goalkeeper.anticipar(ball.global_position, kicker.shot_velocity(), kicker.seconds_until_contact())
@@ -154,6 +163,8 @@ func _on_kick_connecting(power: float, kick_target: Vector3):
 func _on_ball_launch_requested(velocity: Vector3):
 	if ball:
 		ball.kick(velocity)
+	if sound_manager and sound_manager.has_method("play_kick"):
+		sound_manager.play_kick()
 	current_state = PenaltyState.BALL_FLYING
 	_shot_resolved = false
 	ball_hit.emit(velocity)
@@ -174,6 +185,8 @@ func _on_keeper_save(ball_hit_ref: SoccerBall):
 	_shot_resolved = true
 	current_state = PenaltyState.RESULT
 	goalkeeper_score += 1
+	if sound_manager and sound_manager.has_method("play_save"):
+		sound_manager.play_save()
 	ball_saved.emit()
 	shot_complete.emit("save")
 	print("[GameManager] SAVE! Hand collision detected")
@@ -182,6 +195,8 @@ func _on_keeper_save(ball_hit_ref: SoccerBall):
 func _on_keeper_deflect(ball_hit_ref: SoccerBall):
 	if current_state != PenaltyState.BALL_FLYING:
 		return
+	if sound_manager and sound_manager.has_method("play_save"):
+		sound_manager.play_save()
 	ball_deflected.emit()
 	print("[GameManager] DEFLECTED! Body collision")
 
@@ -199,7 +214,10 @@ func _on_goal_detected():
 	_shot_resolved = true
 	current_state = PenaltyState.RESULT
 	kicker_score += 1
+	if sound_manager and sound_manager.has_method("play_goal"):
+		sound_manager.play_goal()
 	goal_scored.emit("Kicker")
+	get_tree().call_group("crowd_clusters", "celebrate_goal", 5.0)
 	shot_complete.emit("goal")
 	print("[GameManager] GOAL!")
 	_next_shot()
@@ -209,6 +227,8 @@ func _on_ball_stopped():
 		return
 	_shot_resolved = true
 	current_state = PenaltyState.RESULT
+	if sound_manager and sound_manager.has_method("play_miss"):
+		sound_manager.play_miss()
 	ball_missed.emit()
 	shot_complete.emit("miss")
 	print("[GameManager] MISS! Ball stopped outside goal")
@@ -223,4 +243,6 @@ func _next_shot():
 
 func _end_game():
 	print("[GameManager] Game Over! Kicker: %d - Goalkeeper: %d" % [kicker_score, goalkeeper_score])
+	if sound_manager and sound_manager.has_method("play_whistle_long"):
+		sound_manager.play_whistle_long()
 	game_over.emit(kicker_score, goalkeeper_score, current_shot)

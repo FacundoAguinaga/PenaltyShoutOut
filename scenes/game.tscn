@@ -10,6 +10,9 @@
 [ext_resource type="Resource" uid="uid://drbeiukmltpl6" path="res://resources/goalkeeper_stats_dificil.tres" id="8_0tnpc"]
 [ext_resource type="PackedScene" uid="uid://cbgydnrm0a6ol" path="res://scenes/ui.tscn" id="8_gee14"]
 [ext_resource type="Script" uid="uid://7uaasljwgtju" path="res://scripts/dive_anim_data.gd" id="9_ir15t"]
+[ext_resource type="PackedScene" uid="uid://conkw87jc3swu" path="res://scenes/stadium.tscn" id="15_stadium"]
+[ext_resource type="Script" uid="uid://4m8gj1idhupb" path="res://scripts/cinematic_intro.gd" id="16_cinematic"]
+[ext_resource type="Script" uid="uid://b1y6p6tysal58" path="res://scripts/sound_manager.gd" id="17_sound"]
 [ext_resource type="PackedScene" uid="uid://bhk5ihqu6i2ro" path="res://assets/stadium/estadios/Fst_Eng_001.FBX" id="20_stadium"]
 [ext_resource type="Material" path="res://assets/materials/pitch_material.tres" id="21_pitch"]
 [ext_resource type="Material" path="res://assets/materials/net_material.tres" id="22_net"]
@@ -17,6 +20,7 @@
 [ext_resource type="Material" path="res://Player/kits/material_rojo.tres" id="26_kit_pateador"]
 [ext_resource type="Material" path="res://Player/kits/material_arquero.tres" id="27_kit_arquero"]
 [ext_resource type="Script" uid="uid://bg2wpgpnpg6f2" path="res://scripts/red_arco.gd" id="28_red_arco"]
+[ext_resource type="AnimationLibrary" path="res://Player/Animations/blender/arquero_blender.tres" id="29_lib_blender"]
 [ext_resource type="Resource" path="res://resources/animresources/Dive_derecha_11.tres" id="30_0"]
 [ext_resource type="Resource" path="res://resources/animresources/Dive_derecha_13.tres" id="30_1"]
 [ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_11.tres" id="30_2"]
@@ -51,25 +55,31 @@
 [ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_17.tres" id="30_31"]
 [ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_18.tres" id="30_32"]
 [ext_resource type="Resource" path="res://resources/animresources/Dive_izquierda_19.tres" id="30_33"]
-[ext_resource type="AnimationLibrary" path="res://Player/Animations/blender/arquero_blender.tres" id="29_lib_blender"]
 [ext_resource type="AnimationLibrary" path="res://Player/Animations/cascadeur_v2/arquero_cascadeur_v2.tres" id="31_lib_cascadeur"]
 
-[sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_u5sy4"]
-ground_color = Color(0.95118266, 0.84504753, 0.8881973, 1)
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_b080p"]
+sky_top_color = Color(0, 0, 0, 1)
+sky_horizon_color = Color(0, 0, 0, 1)
+ground_bottom_color = Color(0, 0, 0, 1)
+ground_horizon_color = Color(0, 0, 0, 1)
 
-[sub_resource type="Sky" id="Sky_u5sy4"]
-sky_material = SubResource("PhysicalSkyMaterial_u5sy4")
+[sub_resource type="Sky" id="Sky_lwmfl"]
+sky_material = SubResource("ProceduralSkyMaterial_b080p")
 
 [sub_resource type="Environment" id="Environment_gee14"]
 background_mode = 2
-sky = SubResource("Sky_u5sy4")
-ambient_light_source = 2
-ambient_light_color = Color(0.62, 0.7, 0.85, 1)
-ambient_light_energy = 0.35
-tonemap_mode = 4
+sky = SubResource("Sky_lwmfl")
+ambient_light_energy = 0.8
+tonemap_mode = 3
+tonemap_exposure = 1.05
+ssao_enabled = true
 glow_enabled = true
-fog_sun_scatter = 1.0
-fog_density = 0.001
+glow_intensity = 0.8
+glow_bloom = 0.25
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.006
+volumetric_fog_albedo = Color(0.8, 0.88, 1, 1)
+volumetric_fog_emission = Color(0.02, 0.04, 0.08, 1)
 adjustment_enabled = true
 adjustment_saturation = 1.11
 
@@ -21463,33 +21473,6 @@ height = 7.8242188
 radius = 0.125
 height = 7.8242188
 
-[sub_resource type="QuadMesh" id="QuadMesh_net_back"]
-size = Vector2(7.33, 2.445)
-subdivide_width = 28
-subdivide_depth = 12
-
-[sub_resource type="QuadMesh" id="QuadMesh_net_side"]
-size = Vector2(1.505, 2.445)
-subdivide_width = 8
-subdivide_depth = 12
-
-[sub_resource type="QuadMesh" id="QuadMesh_net_top"]
-size = Vector2(7.33, 1.505)
-subdivide_width = 28
-subdivide_depth = 8
-
-[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_red"]
-friction = 0.95
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_red_fondo"]
-size = Vector3(7.33, 2.445, 0.06)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_red_lateral"]
-size = Vector3(0.06, 2.445, 1.505)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_red_techo"]
-size = Vector3(7.33, 0.06, 1.505)
-
 [node name="Game" type="Node3D" unique_id=2106286525 node_paths=PackedStringArray("kicker", "goalkeeper", "ball", "goal_zone", "kicker_start_position", "goalkeeper_start_position", "ball_spawn_position")]
 script = ExtResource("1_game_mgr")
 kicker = NodePath("Kicker")
@@ -21502,6 +21485,8 @@ ball_spawn_position = NodePath("BallSpawn")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2138241990]
 transform = Transform3D(1, 0, 0, 0, 0.34, 0.94, 0, -0.94, 0.34, 0, 0, 0)
+visible = false
+light_energy = 0.0
 shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1565271269]
@@ -21509,11 +21494,15 @@ environment = SubResource("Environment_gee14")
 
 [node name="World" type="Node3D" parent="." unique_id=1623218815]
 
+[node name="StadiumModern" parent="World" unique_id=283339485 instance=ExtResource("15_stadium")]
+
 [node name="Stadium" parent="World" unique_id=2005013425 instance=ExtResource("20_stadium")]
 transform = Transform3D(0.03502, 0, 0, 0, 0.03502, 0, 0, 0, 0.03502, 0, -204.86, 41.5)
+visible = false
 
 [node name="Ground" type="MeshInstance3D" parent="World" unique_id=1395891220]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 42)
+visible = false
 mesh = SubResource("PlaneMesh_ground")
 surface_material_override/0 = ExtResource("21_pitch")
 
@@ -21523,6 +21512,7 @@ physics_material_override = SubResource("PhysicsMaterial_cesped")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="World/PisoCuerpo" unique_id=181340459]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 37)
 shape = SubResource("BoxShape3D_piso")
+debug_fill = false
 
 [node name="GoalZone" type="Area3D" parent="World" unique_id=2022118214]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.22, -12.22)
@@ -22129,7 +22119,7 @@ bones/29/bone_meta/extras = {
 "elements": [0.9986282969030584, 0.04719079137227389, 0.02268378024543173, 0.0, -0.04963184564646702, 0.991166219680019, 0.12298863849258568, 0.0, -0.01667946564760968, -0.12394577245793088, 0.9921487999355412, 0.0, 0.0, 13.051577503223086, 3.506162e-08, 1.0]
 },
 "preRotation": [-74.55887013740912, -88.37251281903984, 179.7740327367789],
-"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467000000002e-16],
+"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467e-16],
 "scale": [1.0, 1.0, 1.0000000000000002],
 "translation": [-6.140155, 12.993736969446786, -0.17591274324467143]
 }
@@ -22972,7 +22962,7 @@ metadata/extras = {
 },
 "preRotation": [-1.1249357591627017e-08, -1.2479950172461492e-14, 7.95138686946277e-16],
 "scale": [1.0, 1.0000000000000002, 1.0000000000000002],
-"translation": [2.7475544e-08, 6.205877901587188, 2.0658041943732992e-09]
+"translation": [2.7475544e-08, 6.205877901587188, 2.065804194373299e-09]
 }
 }
 
@@ -23017,7 +23007,6 @@ skeleton = NodePath("player/Node/Skeleton3D")
 left_hand_ik = NodePath("player/Node/Skeleton3D/LeftHandIK")
 right_hand_ik = NodePath("player/Node/Skeleton3D/RightHandIK")
 ball = NodePath("../Ball")
-siempre_adivina = true
 libreria_animaciones = Array[ExtResource("9_ir15t")]([ExtResource("30_0"), ExtResource("30_1"), ExtResource("30_2"), ExtResource("30_3"), ExtResource("30_4"), ExtResource("30_5"), ExtResource("30_6"), ExtResource("30_7"), ExtResource("30_8"), ExtResource("30_9"), ExtResource("30_10"), ExtResource("30_11"), ExtResource("30_12"), ExtResource("30_13"), ExtResource("30_14"), ExtResource("30_15"), ExtResource("30_16"), ExtResource("30_17"), ExtResource("30_18"), ExtResource("30_19"), ExtResource("30_20"), ExtResource("30_21"), ExtResource("30_22"), ExtResource("30_23"), ExtResource("30_24"), ExtResource("30_25"), ExtResource("30_26"), ExtResource("30_27"), ExtResource("30_28"), ExtResource("30_29"), ExtResource("30_30"), ExtResource("30_31"), ExtResource("30_32"), ExtResource("30_33")])
 
 [node name="player" type="Node3D" parent="Goalkeeper" unique_id=1362771372]
@@ -23586,7 +23575,7 @@ bones/29/bone_meta/extras = {
 "elements": [0.9986282969030584, 0.04719079137227389, 0.02268378024543173, 0.0, -0.04963184564646702, 0.991166219680019, 0.12298863849258568, 0.0, -0.01667946564760968, -0.12394577245793088, 0.9921487999355412, 0.0, 0.0, 13.051577503223086, 3.506162e-08, 1.0]
 },
 "preRotation": [-74.55887013740912, -88.37251281903984, 179.7740327367789],
-"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467000000002e-16],
+"rotation": [1.0985959e-14, -1.5902773e-15, 1.9878467e-16],
 "scale": [1.0, 1.0, 1.0000000000000002],
 "translation": [-6.140155, 12.993736969446786, -0.17591274324467143]
 }
@@ -24053,35 +24042,6 @@ metadata/extras = {
 }
 }
 
-[node name="mixamorig1Head" type="BoneAttachment3D" parent="Goalkeeper/player/Node/Skeleton3D" unique_id=142777898]
-transform = Transform3D(0.99333245, -0.113126315, 0.02220073, 0.06739329, 0.41357562, -0.90797204, 0.093533844, 0.9034143, 0.41844213, -2.7060766, 108.92121, 45.41274)
-bone_name = "mixamorig1Head"
-bone_idx = 9
-metadata/extras = {
-"transformData": {
-"eulerOrder": "ZYX",
-"inheritType": 1.0,
-"parentMatrixWorld": {
-"elements": [0.9989088606876552, 0.02941095085327952, 0.0362778718297564, 0.0, -0.0348727023140716, 0.9864169517252652, 0.16051632835909718, 0.0, -0.03106416984090194, -0.16160629012039518, 0.986366272756722, 0.0, 0.0, 14.683031908100418, 1.52145221932e-06, 1.0]
-},
-"translation": [0.0, 6.7201996, 1.972156763076783]
-}
-}
-
-[node name="mixamorig1HeadTop_End" type="Node3D" parent="Goalkeeper/player/Node/Skeleton3D/mixamorig1Head" unique_id=1012632265]
-transform = Transform3D(1, 0, 0, 0, 1, -1.3877788e-17, 0, 1.3877788e-17, 1, 0, 20.999847, 6.1627636)
-metadata/extras = {
-"transformData": {
-"eulerOrder": "ZYX",
-"inheritType": 1.0,
-"parentMatrixWorld": {
-"elements": [0.9982881632105955, 0.05539172565118118, 0.01877498062196346, 0.0, -0.05603220636547791, 0.9977975544512976, 0.0355025653697368, 0.0, -0.01676708137355225, -0.03649379436836098, 0.9991932085151132, 0.0, 0.0, 6.7201996, 1.972156763076783, 1.0]
-},
-"rotation": [7.951386700000001e-16, 0.0, 0.0],
-"translation": [0.0, 20.999847, 6.162763357162476]
-}
-}
-
 [node name="mixamorig1LeftHandThumb3" type="BoneAttachment3D" parent="Goalkeeper/player/Node/Skeleton3D" unique_id=355649189]
 transform = Transform3D(-0.6906351, 0.55493164, -0.46376064, -0.38022834, 0.26685816, 0.8855579, 0.6151825, 0.78793263, 0.0266992, 11.309233, 77.11055, 50.544853)
 bone_name = "mixamorig1LeftHandThumb3"
@@ -24429,7 +24389,7 @@ metadata/extras = {
 },
 "preRotation": [-1.1249357591627017e-08, -1.2479950172461492e-14, 7.95138686946277e-16],
 "scale": [1.0, 1.0000000000000002, 1.0000000000000002],
-"translation": [2.7475544e-08, 6.205877901587188, 2.0658041943732992e-09]
+"translation": [2.7475544e-08, 6.205877901587188, 2.065804194373299e-09]
 }
 }
 
@@ -24667,6 +24627,35 @@ bone_idx = 13
 transform = Transform3D(1, 1.2665987e-07, -7.4505806e-08, 0, 0.9999999, -5.8673322e-08, 1.4901161e-08, -2.3795292e-06, 1.0000001, 0, 10.359962, 1.5258789e-05)
 shape = SubResource("SphereShape3D_qxvco")
 
+[node name="mixamorig1Head" type="BoneAttachment3D" parent="Goalkeeper/player/Node/Skeleton3D" unique_id=142777898]
+transform = Transform3D(0.99333245, -0.113126315, 0.02220073, 0.06739329, 0.41357562, -0.90797204, 0.093533844, 0.9034143, 0.41844213, -2.7060766, 108.92121, 45.41274)
+bone_name = "mixamorig1Head"
+bone_idx = 9
+metadata/extras = {
+"transformData": {
+"eulerOrder": "ZYX",
+"inheritType": 1.0,
+"parentMatrixWorld": {
+"elements": [0.9989088606876552, 0.02941095085327952, 0.0362778718297564, 0.0, -0.0348727023140716, 0.9864169517252652, 0.16051632835909718, 0.0, -0.03106416984090194, -0.16160629012039518, 0.986366272756722, 0.0, 0.0, 14.683031908100418, 1.52145221932e-06, 1.0]
+},
+"translation": [0.0, 6.7201996, 1.972156763076783]
+}
+}
+
+[node name="mixamorig1HeadTop_End" type="Node3D" parent="Goalkeeper/player/Node/Skeleton3D/mixamorig1Head" unique_id=1012632265]
+transform = Transform3D(1, 0, 0, 0, 1, -1.3877788e-17, 0, 1.3877788e-17, 1, 0, 20.999847, 6.1627636)
+metadata/extras = {
+"transformData": {
+"eulerOrder": "ZYX",
+"inheritType": 1.0,
+"parentMatrixWorld": {
+"elements": [0.9982881632105955, 0.05539172565118118, 0.01877498062196346, 0.0, -0.05603220636547791, 0.9977975544512976, 0.0355025653697368, 0.0, -0.01676708137355225, -0.03649379436836098, 0.9991932085151132, 0.0, 0.0, 6.7201996, 1.972156763076783, 1.0]
+},
+"rotation": [7.951386700000001e-16, 0.0, 0.0],
+"translation": [0.0, 20.999847, 6.162763357162476]
+}
+}
+
 [node name="LeftHandMarker" type="Marker3D" parent="Goalkeeper/player/Node" unique_id=1395021002]
 
 [node name="RightHandMarker" type="Marker3D" parent="Goalkeeper/player/Node" unique_id=1909125441]
@@ -24686,6 +24675,7 @@ parameters/TimeScale/scale = 1.0
 
 [node name="paloizq" type="MeshInstance3D" parent="." unique_id=213244557]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.7897885, 1.2698644, -10.99536)
+visible = false
 mesh = SubResource("CylinderMesh_gp8kf")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="paloizq" unique_id=422533907]
@@ -24695,6 +24685,7 @@ shape = SubResource("CapsuleShape3D_p57ef")
 
 [node name="paloder" type="MeshInstance3D" parent="." unique_id=355089576]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.796224, 1.2698644, -10.99536)
+visible = false
 mesh = SubResource("CylinderMesh_gp8kf")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="paloder" unique_id=1891708096]
@@ -24704,6 +24695,7 @@ shape = SubResource("CapsuleShape3D_u5sy4")
 
 [node name="travesaño" type="MeshInstance3D" parent="." unique_id=2060336592]
 transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0.00423193, 2.5698645, -10.99536)
+visible = false
 mesh = SubResource("CylinderMesh_u5sy4")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="travesaño" unique_id=882355651]
@@ -24712,47 +24704,13 @@ mesh = SubResource("CylinderMesh_u5sy4")
 shape = SubResource("CapsuleShape3D_gee14")
 
 [node name="RedArco" type="Node3D" parent="." unique_id=377610255 node_paths=PackedStringArray("pelota")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10.995)
 script = ExtResource("28_red_arco")
 pelota = NodePath("../Ball")
-
-[node name="Fondo" type="MeshInstance3D" parent="RedArco" unique_id=1763689417]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2225, -12.5)
-mesh = SubResource("QuadMesh_net_back")
-surface_material_override/0 = ExtResource("22_net")
-
-[node name="LateralIzq" type="MeshInstance3D" parent="RedArco" unique_id=815018242]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.665, 1.2225, -11.7475)
-mesh = SubResource("QuadMesh_net_side")
-surface_material_override/0 = ExtResource("22_net")
-
-[node name="LateralDer" type="MeshInstance3D" parent="RedArco" unique_id=521039710]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.665, 1.2225, -11.7475)
-mesh = SubResource("QuadMesh_net_side")
-surface_material_override/0 = ExtResource("22_net")
-
-[node name="Techo" type="MeshInstance3D" parent="RedArco" unique_id=1199663885]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2.4449, -11.7475)
-mesh = SubResource("QuadMesh_net_top")
-surface_material_override/0 = ExtResource("22_net")
-
-[node name="Cuerpo" type="StaticBody3D" parent="RedArco" unique_id=1472196951]
-physics_material_override = SubResource("PhysicsMaterial_red")
-
-[node name="ColFondo" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1170290550]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2225, -12.5)
-shape = SubResource("BoxShape3D_red_fondo")
-
-[node name="ColLateralIzq" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1434219225]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.665, 1.2225, -11.7475)
-shape = SubResource("BoxShape3D_red_lateral")
-
-[node name="ColLateralDer" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1249210158]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.665, 1.2225, -11.7475)
-shape = SubResource("BoxShape3D_red_lateral")
-
-[node name="ColTecho" type="CollisionShape3D" parent="RedArco/Cuerpo" unique_id=1817652166]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4449, -11.7475)
-shape = SubResource("BoxShape3D_red_techo")
+material = ExtResource("22_net")
+holgura = 0.128
+elasticidad = 1.165
+estiramiento_maximo = 0.092
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=802062612]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 2)
@@ -24762,3 +24720,14 @@ game_manager = NodePath("..")
 kicker = NodePath("../Kicker")
 goalkeeper = NodePath("../Goalkeeper")
 goal_zone = NodePath("../World/GoalZone")
+
+[node name="SoundManager" type="Node" parent="." unique_id=944885740]
+script = ExtResource("17_sound")
+music_reverb_wet = 0.09
+music_reverb_room_size = 0.23
+music_reverb_damping = 0.24
+
+[node name="CinematicIntro" type="Node3D" parent="." unique_id=1799928990 node_paths=PackedStringArray("camera", "sound_manager")]
+script = ExtResource("16_cinematic")
+camera = NodePath("../Camera3D")
+sound_manager = NodePath("../SoundManager")

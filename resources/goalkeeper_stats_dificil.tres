@@ -9,3 +9,4 @@ reaction_time = 0.05
 reach = 100.0
 dive_speed = 100.0
 velocidad_max_atajar = 28.0
+error_percepcion = 0.25
