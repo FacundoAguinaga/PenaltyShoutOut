@@ -19,6 +19,7 @@ var spawn_position: Vector3 = Vector3.ZERO
 var _prev_z: float = 0.0
 var _crossed_emitted: bool = false
 var _last_shot_data: ShotData
+var _sin_freno: bool = false
 
 func _ready():
 	spawn_position = global_position
@@ -69,7 +70,12 @@ func _check_out_of_bounds():
 		is_in_play = false
 		ball_stopped.emit()
 
-func kick(velocity: Vector3):
+## sin_freno: el aire no la frena y sigue la parabola exacta. Lo usa la picada: es
+## tan lenta que frenada caeria mucho antes de donde se apunto.
+func kick(velocity: Vector3, sin_freno: bool = false):
+	_sin_freno = sin_freno
+	linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE if sin_freno else RigidBody3D.DAMP_MODE_COMBINE
+	linear_damp = 0.0
 	freeze = false
 	is_in_play = true
 	has_been_kicked = true
@@ -106,7 +112,8 @@ func agarrar():
 	freeze = true
 
 func _apply_air_resistance():
-	linear_velocity *= air_resistance
+	if not _sin_freno:
+		linear_velocity *= air_resistance
 	angular_velocity *= spin_decay
 
 func get_speed() -> float:

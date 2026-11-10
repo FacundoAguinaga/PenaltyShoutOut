@@ -229,7 +229,7 @@ func _armar_potencia() -> void:
 	_potencia_relleno.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_potencia.add_child(_potencia_relleno)
 
-	_ayuda = EstiloUI.label("WASD  apuntar      ESPACIO  mantener y soltar para patear", 12,
+	_ayuda = EstiloUI.label("WASD  apuntar      ESPACIO  mantener y soltar para patear      SHIFT + soltar  picarla", 12,
 		Color(EstiloUI.COLOR_GRIS, 0.8), EstiloUI.fuente(500, 2))
 	_ayuda.anchor_top = 1.0
 	_ayuda.anchor_bottom = 1.0

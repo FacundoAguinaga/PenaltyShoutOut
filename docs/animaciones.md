@@ -3,6 +3,9 @@
 Cómo están hechas las animaciones del arquero, cómo las usa el juego y cómo
 agregar nuevas.
 
+> Si existe `animaciones_pes/`, el juego usa en cambio las animaciones de PES 2021:
+> ver [animaciones_pes.md](animaciones_pes.md). Lo de abajo es lo que se usa sin ellas.
+
 ## 1. Las que usa el juego: Cascadeur v2
 
 34 animaciones hechas en Cascadeur, en `Player/Animations/cascadeur_v2/`:

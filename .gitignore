@@ -16,3 +16,6 @@ Player/Ch36_nonPBR.fbm/
 # genera desde stadium.glb con tools/optimizar_estadio.gd.
 assets/models/stadium.glb
 assets/models/stadium_optimizado.scn
+
+# Animaciones extraidas de PES 2021: solo para uso local.
+animaciones_pes/

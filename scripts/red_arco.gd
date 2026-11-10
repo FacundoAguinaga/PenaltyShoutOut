@@ -88,6 +88,11 @@ const RADIO_PELOTA_DEFECTO := 0.11
 const VELOCIDAD_AGARRE_PLENO := 0.5
 ## La red se duerme despues de esta cantidad de frames sin moverse.
 const FRAMES_PARA_DORMIR := 45
+const ALTURA_TELA_EN_PISO := 0.07
+## Cuanto puede corregir un contacto de una vez: evita que un pliegue la dispare.
+const HUNDIDA_MAXIMA := 0.1
+## Red de seguridad: la pelota de adentro no sale de la caja de la red mas esto.
+const BOLSA_MAXIMA := 1.0
 
 # --- Simulacion (indices de particula) ---
 var _x := PackedVector3Array()   # posicion actual
@@ -280,7 +285,7 @@ func _construir_ataduras() -> void:
 			if _w[i] == 0.0:
 				var tipo := _tipo_de_fija(_x[i])
 				if not fijas_por_tipo.has(tipo):
-					fijas_por_tipo[tipo] = PackedInt32Array()
+					fijas_por_tipo[tipo] = []
 				fijas_por_tipo[tipo].append(i)
 			else:
 				libres.append(i)
@@ -360,6 +365,7 @@ func _physics_process(dt: float) -> void:
 	var contacto_en_frame := false
 	for s in n:
 		_predecir(h)
+		var bprev := bpos
 		if wb > 0.0:
 			bpos += bvel * h
 		var bpredicha := bpos
@@ -370,9 +376,14 @@ func _physics_process(dt: float) -> void:
 			# Primero se empujan pelota y red entre si segun sus masas; despues
 			# se corrige solo la pelota para garantizar que no quede adentro de
 			# la red (es lo que impide que la atraviese).
-			bpos = _resolver_contactos(bpos, wb, true)
+			bpos = _resolver_contactos(bpos, bprev, wb, true)
 			if wb > 0.0:
-				bpos = _resolver_contactos(bpos, wb, false)
+				bpos = _resolver_contactos(bpos, bprev, wb, false)
+				if _lado_pelota > 0.0:
+					var limitada := _limitar_a_la_bolsa(bpos)
+					if limitada != bpos:
+						_hubo_contacto = true
+						bpos = limitada
 				if _hubo_contacto:
 					# Lo que la red corrio a la pelota se vuelve velocidad, pero
 					# con tope: como mucho frena lo que iba hacia la red y le
@@ -402,6 +413,10 @@ func _physics_process(dt: float) -> void:
 
 	_actualizar_malla()
 	_quizas_dormir(cerca)
+
+func _limitar_a_la_bolsa(p: Vector3) -> Vector3:
+	var mitad := ancho * 0.5 + BOLSA_MAXIMA
+	return Vector3(clampf(p.x, -mitad, mitad), minf(p.y, alto + BOLSA_MAXIMA), maxf(p.z, -profundidad - BOLSA_MAXIMA))
 
 func _pelota_cerca(dt: float) -> bool:
 	if pelota == null or not pelota.is_inside_tree():
@@ -498,7 +513,7 @@ func _buscar_candidatos(bpos: Vector3, bvel: Vector3, dt: float) -> void:
 				vistos[t] = true
 				_candidatos.append(t)
 
-func _resolver_contactos(bpos: Vector3, wb: float, mover_red: bool) -> Vector3:
+func _resolver_contactos(bpos: Vector3, bprev: Vector3, wb: float, mover_red: bool) -> Vector3:
 	var r := _radio_pelota
 	var lado := _lado_pelota
 	for t in _candidatos:
@@ -508,6 +523,10 @@ func _resolver_contactos(bpos: Vector3, wb: float, mover_red: bool) -> Vector3:
 		var a := _x[ia]
 		var b := _x[ib]
 		var c := _x[ic]
+		# Tela acostada en el pasto: la pelota la pisa, no la empuja. Si contara,
+		# la pelota quieta quedaria "del otro lado" y la tela la levantaria.
+		if a.y < ALTURA_TELA_EN_PISO and b.y < ALTURA_TELA_EN_PISO and c.y < ALTURA_TELA_EN_PISO:
+			continue
 		var n := (b - a).cross(c - a)
 		var largo_n := n.length()
 		if largo_n < 1e-9:
@@ -527,6 +546,10 @@ func _resolver_contactos(bpos: Vector3, wb: float, mover_red: bool) -> Vector3:
 			# pasa justo por un nudo y no cae adentro de ningun triangulo.
 			if (dif - n * n.dot(dif)).length_squared() >= r * r:
 				continue
+			# Solo si recien cruzo. Si ya estaba de ese lado, es un pliegue de la
+			# tela que quedo detras de la pelota, no un cruce.
+			if n.dot(bprev - q) * lado <= 0.0:
+				continue
 			dir = n * lado
 			hundida = r - dn
 		else:
@@ -542,7 +565,7 @@ func _resolver_contactos(bpos: Vector3, wb: float, mover_red: bool) -> Vector3:
 		var denom := wb + bc.x * bc.x * wa + bc.y * bc.y * wbb + bc.z * bc.z * wc
 		if denom <= 0.0:
 			continue
-		var l := hundida / denom
+		var l := minf(hundida, HUNDIDA_MAXIMA) / denom
 		bpos += dir * (l * wb)
 		if mover_red:
 			_x[ia] -= dir * (l * bc.x * wa)

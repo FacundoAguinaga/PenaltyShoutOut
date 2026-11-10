@@ -1,6 +1,9 @@
 extends Node3D
 class_name GameManager
 
+const DepurarAnimaciones := preload("res://scripts/depurar_animaciones.gd")
+const Cinematicas := preload("res://scripts/cinematicas.gd")
+
 enum PenaltyState {
 	IDLE,
 	AIMING,
@@ -47,6 +50,13 @@ func _ready():
 	_auto_discover_nodes()
 	_connect_signals()
 	_apply_goalkeeper_difficulty()
+	if kicker and goalkeeper:
+		add_child(DepurarAnimaciones.new(kicker, goalkeeper, self))
+		_cinematicas = Cinematicas.new(self, kicker, goalkeeper, get_node("Camera3D"))
+		add_child(_cinematicas)
+		var intro := get_node_or_null("CinematicIntro")
+		if intro:
+			intro.intro_finished.connect(_cinematicas.jugar_previa, CONNECT_ONE_SHOT)
 	if show_debug_goal:
 		_draw_debug_goal()
 	start_penalty()
@@ -135,6 +145,8 @@ func start_penalty():
 	_shot_resolved = false
 
 	reset_positions()
+	if _cinematicas:
+		_cinematicas.limpiar()
 
 	if kicker:
 		kicker.start_aiming()
@@ -158,11 +170,11 @@ func _on_kick_connecting(power: float, kick_target: Vector3):
 		sound_manager.play_anticipation()
 	# The keeper starts reading the shot as the shooter starts the run-up.
 	if goalkeeper and kicker and ball and goalkeeper.has_method("anticipar"):
-		goalkeeper.anticipar(ball.global_position, kicker.shot_velocity(), kicker.seconds_until_contact())
+		goalkeeper.anticipar(ball.global_position, kicker.shot_velocity(), kicker.seconds_until_contact(), kicker.es_picada())
 
 func _on_ball_launch_requested(velocity: Vector3):
 	if ball:
-		ball.kick(velocity)
+		ball.kick(velocity, kicker != null and kicker.es_picada())
 	if sound_manager and sound_manager.has_method("play_kick"):
 		sound_manager.play_kick()
 	current_state = PenaltyState.BALL_FLYING
@@ -189,8 +201,10 @@ func _on_keeper_save(ball_hit_ref: SoccerBall):
 		sound_manager.play_save()
 	ball_saved.emit()
 	shot_complete.emit("save")
+	if kicker:
+		kicker.reaccionar(false)
 	print("[GameManager] SAVE! Hand collision detected")
-	_next_shot()
+	_next_shot("save")
 
 func _on_keeper_deflect(ball_hit_ref: SoccerBall):
 	if current_state != PenaltyState.BALL_FLYING:
@@ -217,10 +231,12 @@ func _on_goal_detected():
 	if sound_manager and sound_manager.has_method("play_goal"):
 		sound_manager.play_goal()
 	goal_scored.emit("Kicker")
+	if kicker:
+		kicker.reaccionar(true)
 	get_tree().call_group("crowd_clusters", "celebrate_goal", 5.0)
 	shot_complete.emit("goal")
 	print("[GameManager] GOAL!")
-	_next_shot()
+	_next_shot("goal")
 
 func _on_ball_stopped():
 	if _shot_resolved or current_state != PenaltyState.BALL_FLYING:
@@ -231,15 +247,52 @@ func _on_ball_stopped():
 		sound_manager.play_miss()
 	ball_missed.emit()
 	shot_complete.emit("miss")
+	if kicker:
+		kicker.reaccionar(false)
 	print("[GameManager] MISS! Ball stopped outside goal")
-	_next_shot()
+	_next_shot("miss")
 
-func _next_shot():
-	await get_tree().create_timer(1.8).timeout
+const FUNDIDO_ENTRE_TIROS := 0.3
+const NEGRO_ENTRE_TIROS := 0.15
+
+## La cinematica de la jugada dura hasta el proximo tiro.
+func _next_shot(resultado: String):
+	await _cinematicas.jugar(resultado)
 	if current_shot < shots_per_round:
+		# Los jugadores vuelven a su lugar: se tapa con un fundido a negro.
+		var negro := _capa_negra()
+		var salida := create_tween()
+		salida.tween_property(negro, "color:a", 1.0, FUNDIDO_ENTRE_TIROS)
+		await salida.finished
 		start_penalty()
+		# Un instante en negro para que no se vea ni un cuadro del acomodo.
+		var entrada := create_tween()
+		entrada.tween_interval(NEGRO_ENTRE_TIROS)
+		entrada.tween_property(negro, "color:a", 0.0, FUNDIDO_ENTRE_TIROS)
 	else:
+		await _cinematicas.jugar_fin()
 		_end_game()
+
+var _negro: ColorRect
+var _cinematicas: Node
+
+## Va a negro o vuelve (alfa 1 o 0). La ceremonia final lo usa para armar la escena.
+func fundido(alfa: float) -> void:
+	var t := create_tween()
+	t.tween_property(_capa_negra(), "color:a", alfa, FUNDIDO_ENTRE_TIROS)
+	await t.finished
+
+func _capa_negra() -> ColorRect:
+	if _negro == null:
+		var capa := CanvasLayer.new()
+		capa.layer = 50
+		add_child(capa)
+		_negro = ColorRect.new()
+		_negro.color = Color(0, 0, 0, 0)
+		_negro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_negro.set_anchors_preset(Control.PRESET_FULL_RECT)
+		capa.add_child(_negro)
+	return _negro
 
 func _end_game():
 	print("[GameManager] Game Over! Kicker: %d - Goalkeeper: %d" % [kicker_score, goalkeeper_score])

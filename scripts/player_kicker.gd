@@ -29,7 +29,8 @@ enum KickState {
 @export var kick_foot_bone: String = "mixamorig1RightFoot"
 
 @export_group("Kick Parameters")
-@export var power_speed: float = 2.5
+## Veces por segundo que se llena la barra.
+@export var power_speed: float = 1.0
 @export var max_power: float = 100.0
 @export var optimal_power_min: float = 75.0
 @export var optimal_power_max: float = 90.0
@@ -63,7 +64,6 @@ var current_state: KickState = KickState.IDLE
 var _smooth_aim: Vector2 = Vector2.ZERO
 var aim_target_3d: Vector3 = Vector3.ZERO
 var power: float = 0.0
-var power_filling: bool = true
 var final_power: float = 0.0
 var final_target: Vector3 = Vector3.ZERO
 var run_up_timer: float = 0.0
@@ -73,6 +73,32 @@ var _last_shot_data: ShotData
 ## Where the ball must be, relative to the kicker, for the kick animation to
 ## hit it (measured once in _ready from the animation itself).
 var _contact_offset := Vector3.ZERO
+## Animaciones de PES (ver PesAnimaciones): cada remate es una carrera unida a un
+## golpe, y hay varios por estilo de carrera, direccion, potencia y forma de golpear.
+var _pes := false
+var _remates_por_estilo := {}
+var _estilo := ""
+var _remate: Dictionary = {}
+var _inicio_remate := 0.0
+var _reaccion := ""
+var _picada := false
+## Una cinematica maneja al pateador: no reacciona por su cuenta.
+var en_cinematica := false
+var _ultima_picada := ""
+var _base_basis: Basis
+const VELOCIDAD_CARRERA := 0.72
+## La carrera arranca a esta fraccion de su velocidad y llega a la normal en
+## ARRANQUE_CARRERA segundos de clip: sale de estar parado, no a mitad de un trote.
+const VELOCIDAD_ARRANQUE := 0.4
+## Picada: segundos de vuelo hasta la linea y a que altura minima la cruza.
+const VUELO_PICADA_LENTA := 1.5
+const VUELO_PICADA_RAPIDA := 1.05
+const ALTURA_MINIMA_PICADA := 1.3
+## Entre los remates casi igual de buenos se elige al azar, y con mas libertad en la
+## picada: el que ataja no tiene que poder reconocerla por el gesto.
+const MARGEN_VARIEDAD_REMATE := 0.1
+const MARGEN_VARIEDAD_PICADA := 0.7
+const ARRANQUE_CARRERA := 0.4
 
 signal kick_connecting(power: float, kick_target: Vector3)
 signal ball_launch_requested(velocity: Vector3)
@@ -81,7 +107,124 @@ signal shot_taken(shot_data: ShotData)
 func _ready():
 	_find_skeleton_and_anim_player()
 	_setup_ik()
-	_measure_contact_offset()
+	if PesAnimaciones.disponible():
+		_cargar_pes()
+	else:
+		_measure_contact_offset()
+
+func _cargar_pes() -> void:
+	_pes = true
+	_base_basis = global_basis
+	PesAnimaciones.cargar_libreria(animation_player, "pateador.res")
+	PesAnimaciones.cuidar_piso(self, skeleton)
+	animation_player.animation_finished.connect(_al_terminar_animacion)
+	for r: Dictionary in PesAnimaciones.datos()["remates"]:
+		if not _remates_por_estilo.has(r["estilo"]):
+			_remates_por_estilo[r["estilo"]] = []
+		_remates_por_estilo[r["estilo"]].append(r)
+
+## Donde tiene que estar la raiz para que el pie de este remate le pegue a la pelota.
+func _raiz_para(remate: Dictionary) -> Vector3:
+	var dedo := PesAnimaciones.v3(remate["dedo"])
+	var dir := Vector3(remate["dir_pie"][0], 0.0, remate["dir_pie"][2]).normalized()
+	var raiz := ball.global_position - dedo - dir * toe_to_ball
+	raiz.y = 0.0
+	return raiz
+
+## Se para donde arranca la carrera, con la postura de espera del penal. Todavia
+## no se sabe a donde va a patear: se usa un remate del estilo como referencia y
+## al soltar el tiro se ajusta lo poco que falte (_jugar_remate).
+func _preparar_pes() -> void:
+	# La reaccion del tiro anterior lo pudo haber dejado girado.
+	# Se elige antes de saber como va a patear: tiene que tener de los dos tipos.
+	_estilo = _remates_por_estilo.keys().filter(func(e: String): return _remates_por_estilo[e].any(func(r: Dictionary): return r["lob"])).pick_random()
+	_remate = {}
+	_reaccion = ""
+	var referencia: Dictionary = _remates_por_estilo[_estilo][0]
+	var espera := "pes/" + str(PesAnimaciones.datos()["esperas_pateador"].pick_random())
+	# Sin fundido: se ve recien cuando se va el negro entre tiros, ya en su lugar.
+	animation_player.speed_scale = 1.0
+	animation_player.play(espera, 0.0)
+	animation_player.seek(0.0, true)
+	# Espera mirando hacia la pelota, sobre la linea de su carrera.
+	var desde_golpe := PesAnimaciones.v3(referencia["cadera_inicio"]) - PesAnimaciones.v3(referencia["dedo"])
+	global_basis = Basis(Vector3.UP, atan2(desde_golpe.x, desde_golpe.z)) * _base_basis
+	global_position = _raiz_para(referencia)
+	var cadera_espera := PesAnimaciones.cadera_en(animation_player, skeleton, self, espera, 0.0)
+	var desfase := PesAnimaciones.v3(referencia["cadera_inicio"]) - cadera_espera
+	desfase.y = 0.0
+	global_position += desfase
+
+## Elige el golpe segun el tiro: el pie sale hacia donde va la pelota y la potencia
+## se parece a la pedida. Un tiro alto o fuerte va de empeine; uno bajo y suave,
+## colocado con la cara interna.
+func _elegir_remate() -> void:
+	var hacia := Vector3(final_target.x, 0.0, goal_z_position) - ball.global_position
+	hacia.y = 0.0
+	hacia = hacia.normalized()
+	var colocado := final_target.y < 1.2 and final_power / max_power < 0.7
+	var potencia := "long" if final_power / max_power >= 0.55 else "mid"
+	var mejor_costo := INF
+	var costos := {}
+	for r: Dictionary in _remates_por_estilo[_estilo]:
+		if r["lob"] != _picada:
+			continue
+		var dir := Vector3(r["dir_pie"][0], 0.0, r["dir_pie"][2]).normalized()
+		var costo := dir.angle_to(hacia)
+		if not _picada:
+			costo += 0.0 if r["potencia"] == potencia else 0.2
+			costo += 0.15 if (r["metodo"] == "inside") != colocado else 0.0
+		costos[r] = costo
+		mejor_costo = minf(mejor_costo, costo)
+	var margen := MARGEN_VARIEDAD_PICADA if _picada else MARGEN_VARIEDAD_REMATE
+	var parecidos: Array = costos.keys().filter(func(r: Dictionary): return costos[r] <= mejor_costo + margen and (not _picada or r["anim"] != _ultima_picada))
+	_remate = parecidos.pick_random() if not parecidos.is_empty() else costos.keys().pick_random()
+	if _picada:
+		_ultima_picada = _remate["anim"]
+	# Un cuadro antes del golpe exacto: el pie va a 20 m/s (33 cm por cuadro) y la
+	# comprobacion recien se entera despues de que paso ese momento.
+	kick_contact_time = float(_remate["t"]) - 1.0 / 60.0
+	_inicio_remate = _remate["inicio"]
+
+func _jugar_remate() -> void:
+	const FUNDIDO := 0.35
+	var raiz := Transform3D(_base_basis, _raiz_para(_remate))
+	PesAnimaciones.transicion(self, animation_player, skeleton, raiz, "pes/" + str(_remate["anim"]), _inicio_remate, FUNDIDO)
+	animation_player.speed_scale = _velocidad_carrera(kick_contact_time - _inicio_remate)
+
+## La carrera se ve tranquila: va mas lenta que el clip y acelera hasta la velocidad
+## normal justo antes del golpe. falta: segundos de clip hasta el golpe.
+func _velocidad_carrera(falta: float) -> float:
+	var hecho := kick_contact_time - _inicio_remate - falta
+	var arranque := lerpf(VELOCIDAD_ARRANQUE, 1.0, clampf(hecho / ARRANQUE_CARRERA, 0.0, 1.0))
+	return lerpf(1.0, VELOCIDAD_CARRERA, clampf((falta - 0.1) / 0.4, 0.0, 1.0)) * arranque
+
+## Segundos reales que tarda en recorrer esos segundos de clip.
+func _duracion_carrera(falta: float) -> float:
+	const PASO := 1.0 / 120.0
+	var total := 0.0
+	while falta > 0.0:
+		total += PASO
+		falta -= PASO * _velocidad_carrera(falta)
+	return total
+
+## El GameManager avisa como termino el tiro: festeja o se lamenta.
+func reaccionar(gol: bool) -> void:
+	if _pes and not _remate.is_empty() and _reaccion == "":
+		_reaccion = "gol" if gol else "fallo"
+
+func _seguir_reaccion() -> void:
+	var sig: Dictionary = _remate["sig"][_reaccion]
+	var en_remate: bool = animation_player.current_animation == "pes/" + str(_remate["anim"])
+	if en_remate and animation_player.is_playing() and animation_player.current_animation_position < float(sig["t_salto"]):
+		return
+	_reaccion = "hecha"
+	PesAnimaciones.empalmar(self, animation_player, skeleton, "pes/" + str(sig["anim"]), sig["t_inicio"], 0.3)
+
+## Se termino el remate o la reaccion y la jugada sigue en pantalla: se queda parado.
+func _al_terminar_animacion(_nombre: StringName) -> void:
+	if not en_cinematica and not _remate.is_empty() and (current_state == KickState.KICK_CONTACT or current_state == KickState.FOLLOW_THROUGH):
+		PesAnimaciones.empalmar(self, animation_player, skeleton, "pes/pk_idle", 0.0, 0.5)
 
 ## Poses the kick animation at kick_contact_time and reads where the kicking
 ## toe is. The ball has to be there (plus toe_to_ball forward), so before every
@@ -133,15 +276,22 @@ func _process(delta: float):
 		KickState.KICK_CONTACT:
 			if animation_player and not animation_player.is_playing():
 				notify_follow_through()
+	if (_reaccion == "gol" or _reaccion == "fallo") and not en_cinematica:
+		_seguir_reaccion()
 
 func start_aiming():
+	en_cinematica = false
 	current_state = KickState.AIMING
-	_place_behind_ball()
+	if not _pes:
+		_place_behind_ball()
 	_smooth_aim = Vector2.ZERO
 	power = 0.0
-	power_filling = true
+	_picada = false
 	_last_shot_data = null
-	play_idle()
+	if _pes:
+		_preparar_pes()
+	else:
+		play_idle()
 
 func _process_aiming(delta: float):
 	var input := Input.get_vector("move_left", "move_right", "move_down", "move_up")
@@ -184,21 +334,14 @@ func _process_charging(delta: float):
 	_smooth_aim = _smooth_aim.limit_length(1.0)
 	aim_target_3d = _aim_to_goal_position(_smooth_aim)
 
-	if power_filling:
-		power += power_speed * max_power * delta
-		if power >= max_power:
-			power = max_power
-			power_filling = false
-	else:
-		power -= power_speed * max_power * delta
-		if power <= 0.0:
-			power = 0.0
-			power_filling = true
+	# Solo sube: si te pasas se queda al maximo (y el tiro se va, ver _release_kick).
+	power = minf(power + power_speed * max_power * delta, max_power)
 
 	if Input.is_action_just_released("kick_charge"):
 		_release_kick()
 
-func _release_kick():
+func _release_kick(picada: bool = Input.is_action_pressed("kick_picar")):
+	_picada = picada
 	final_power = power
 	final_target = aim_target_3d
 
@@ -213,6 +356,8 @@ func _release_kick():
 	current_state = KickState.RUN_UP
 	run_up_timer = 0.0
 	is_kick_complete = false
+	if _pes:
+		_elegir_remate()
 
 	kick_connecting.emit(final_power, final_target)
 
@@ -224,6 +369,8 @@ func _process_run_up(delta: float):
 		if use_kick_ik:
 			_enable_kick_ik()
 
+	if _pes and is_kick_complete:
+		animation_player.speed_scale = _velocidad_carrera(kick_contact_time - animation_player.current_animation_position)
 	_check_animation_contact()
 
 func _check_animation_contact():
@@ -235,6 +382,7 @@ func _check_animation_contact():
 func notify_animation_contact():
 	if current_state != KickState.KICK_CONTACT:
 		current_state = KickState.KICK_CONTACT
+		animation_player.speed_scale = 1.0
 		_update_kick_foot_ik_target()
 
 		var ball_pos = _get_ball_world_position()
@@ -301,6 +449,8 @@ func _update_kick_foot_ik_target():
 func _calculate_ball_velocity() -> Vector3:
 	var power_ratio = final_power / max_power
 	var ball_pos = _get_ball_world_position()
+	if _picada:
+		return _velocidad_picada(ball_pos, power_ratio)
 	var target_world = Vector3(final_target.x, final_target.y, goal_z_position)
 	var direction = (target_world - ball_pos).normalized()
 	var speed = 15.0 + power_ratio * 25.0
@@ -312,6 +462,16 @@ func _calculate_ball_velocity() -> Vector3:
 	var velocity = direction * speed
 	velocity.y = vy_needed * power_ratio + 2.0 * (1.0 - power_ratio)
 	return velocity
+
+## Globo lento que baja hacia donde se apunto, cruzando la linea a esa altura. Mas
+## potencia lo hace llegar antes, pero sigue siendo lento.
+func _velocidad_picada(ball_pos: Vector3, power_ratio: float) -> Vector3:
+	var t := lerpf(VUELO_PICADA_LENTA, VUELO_PICADA_RAPIDA, power_ratio)
+	var hacia := Vector3(final_target.x, maxf(final_target.y, ALTURA_MINIMA_PICADA), PredictionModule.Z_GOAL) - ball_pos
+	return Vector3(hacia.x / t, (hacia.y + 0.5 * PredictionModule.GRAVITY * t * t) / t, hacia.z / t)
+
+func es_picada() -> bool:
+	return _picada
 
 func disable_all_ik():
 	if plant_foot_ik:
@@ -348,9 +508,12 @@ func _kick_animation_name() -> String:
 func seconds_until_contact() -> float:
 	if current_state == KickState.RUN_UP:
 		if not is_kick_complete:
+			if _pes:
+				return maxf(0.0, run_up_duration - run_up_timer) + _duracion_carrera(kick_contact_time - _inicio_remate)
 			return maxf(0.0, run_up_duration - run_up_timer) + kick_contact_time
 		if animation_player:
-			return maxf(0.0, kick_contact_time - animation_player.current_animation_position)
+			var falta := maxf(0.0, kick_contact_time - animation_player.current_animation_position)
+			return _duracion_carrera(falta) if _pes else falta
 	return 0.0
 
 ## Velocity the ball will get when kicked. Already fixed once the kick is
@@ -360,6 +523,9 @@ func shot_velocity() -> Vector3:
 
 func play_kick():
 	if not animation_player:
+		return
+	if _pes:
+		_jugar_remate()
 		return
 	var kick_anim := _kick_animation_name()
 
@@ -371,7 +537,6 @@ func play_kick():
 func start_charging():
 	current_state = KickState.CHARGING
 	power = 0.0
-	power_filling = true
 
 func get_current_aim() -> Vector3:
 	return aim_target_3d

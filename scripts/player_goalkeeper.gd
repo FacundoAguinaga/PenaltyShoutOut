@@ -55,6 +55,14 @@ var _anticipado: bool = false
 ## Cada plan nuevo invalida las esperas del anterior.
 var _plan_id: int = 0
 var _objetivo: Vector2
+## Usa las animaciones de PES (ver PesAnimaciones).
+var _pes: bool = false
+var _esperas: Array = []
+var _base_basis: Basis
+var _empalme_hecho: bool = false
+var _cola_reaccion: Array = []
+## Si en este tiro el arquero ya se tiro antes de la patada (picada).
+var _ya_jugado: bool = false
 
 @export_group("Rebote")
 ## Velocidad maxima para agarrarla si no hay GoalkeeperStats asignado.
@@ -66,6 +74,7 @@ var _objetivo: Vector2
 
 func _ready():
 	_base_position = global_position
+	_base_basis = global_basis
 	
 	if not animation_player:
 		animation_player = _find_node_of_type(self, "AnimationPlayer") as AnimationPlayer
@@ -81,8 +90,60 @@ func _ready():
 	# Inicializamos el RepositionModule con IK en la mano derecha por ahora (se podría mejorar para usar la correcta según lado)
 	var main_ik = right_hand_ik if right_hand_ik else left_hand_ik
 	reposition_module = RepositionModule.new(self, animation_player, main_ik)
-	
+
+	if PesAnimaciones.disponible():
+		_cargar_pes()
+
 	reset_to_idle()
+
+## Reemplaza la libreria de atajadas por la de PES. La zona de cada una sale de
+## donde toca la pelota; SAVE son las que la agarran y DIVE las que la desvian.
+func _cargar_pes() -> void:
+	_pes = true
+	PesAnimaciones.cargar_libreria(animation_player, "arquero.res")
+	PesAnimaciones.cuidar_piso(self, skeleton)
+	var datos := PesAnimaciones.datos()
+	_esperas = datos["esperas_arquero"]
+	var libreria: Array[DiveAnimData] = []
+	for e: Dictionary in datos["atajadas"]:
+		var d := DiveAnimData.new()
+		d.anim_name = e["anim"]
+		d.contact_time = e["t"]
+		d.despegue = e["despegue"]
+		d.hand_bone = e["hueso"]
+		d.canonical_target = PesAnimaciones.v3(e["punto"])
+		d.zone = DiveAnimData.AnimSelector.clasificar_zona(Vector2(d.canonical_target.x, d.canonical_target.y), goal_width, goal_height)
+		d.tipo = DiveAnimData.Tipo.SAVE if e["familia"] in ["gkcatch", "gkblockcover"] else DiveAnimData.Tipo.DIVE
+		d.empalmes = e["sig"]
+		libreria.append(d)
+	libreria_animaciones = libreria
+	animation_player.animation_finished.connect(_al_terminar_animacion)
+
+func _al_terminar_animacion(_nombre: StringName) -> void:
+	if state == GKState.IDLE or state == GKState.ANTICIPATING:
+		_jugar_espera()
+	elif state == GKState.RECOVERING:
+		_seguir_tras_reaccion()
+
+## La espera del penal: varias versiones que se van turnando.
+func _jugar_espera(fundido: float = 0.4) -> void:
+	animation_player.play("pes/" + str(_esperas.pick_random()), fundido)
+
+## Gano el partido: una cinematica lo maneja hasta el final. No hace mas nada solo.
+func preparar_ceremonia() -> void:
+	state = GKState.RESET
+	_agarrada = false
+	_cola_reaccion = []
+	reposition_module._stop_ik()
+	animation_player.speed_scale = 1.0
+
+## Muchas reacciones son solo levantarse (1 s) y la jugada sigue en pantalla unos
+## segundos mas: despues de un gol se lamenta (el lamento que mejor continua la pose,
+## lo elige pes_construir), y despues de atajar se queda con la
+## pelota. Cuando no queda nada mas para hacer, vuelve a la espera.
+func _seguir_tras_reaccion() -> void:
+	var sig: Dictionary = _cola_reaccion.pop_front() if not _cola_reaccion.is_empty() else {"anim": _esperas.pick_random(), "t_inicio": 0.0}
+	PesAnimaciones.empalmar(self, animation_player, skeleton, "pes/" + str(sig["anim"]), sig["t_inicio"], FUNDIDO_TRAS_REACCION)
 
 func _process(delta: float) -> void:
 	if state == GKState.DIVING:
@@ -91,6 +152,40 @@ func _process(delta: float) -> void:
 			_on_dive_terminado()
 	if state == GKState.DIVING or state == GKState.RESULT:
 		_esquivar_palos(delta)
+	if state == GKState.RESULT and _pes:
+		_seguir_reaccion()
+
+## Despues de la atajada encadena la reaccion que mejor continua la pose: se
+## levanta, se lamenta o festeja.
+func _seguir_reaccion() -> void:
+	if _empalme_hecho or not _current_anim or _current_anim.empalmes.is_empty():
+		return
+	var clave := {ResultModule.Resultado.ATAJA: "ataja", ResultModule.Resultado.REBOTE: "rebote"}.get(_resultado, "gol") as String
+	var sig: Dictionary = _current_anim.empalmes[clave]
+	if animation_player.is_playing() and animation_player.current_animation_position < float(sig["t_salto"]):
+		return
+	_empalme_hecho = true
+	state = GKState.RECOVERING
+	_cola_reaccion = []
+	if _resultado == ResultModule.Resultado.ATAJA:
+		var lado := SUFIJO_ESPEJO if _current_anim.anim_name.ends_with(SUFIJO_ESPEJO) else ""
+		_cola_reaccion.append({"anim": TRAS_ATAJAR + lado, "t_inicio": 0.0})
+	elif _resultado == ResultModule.Resultado.GOL and not sig["cola"].is_empty():
+		_cola_reaccion.append(sig["cola"])
+	elif _resultado == ResultModule.Resultado.REBOTE:
+		_cola_reaccion.append({"anim": FESTEJO_REBOTE, "t_inicio": 0.0})
+	reposition_module._stop_ik()
+	PesAnimaciones.empalmar(self, animation_player, skeleton, "pes/" + str(sig["anim"]), sig["t_inicio"], 0.3)
+
+const SUFIJO_ESPEJO := "__M"
+const TRAS_ATAJAR := "dm_oop_gk_pk_idle_catch_0_2_cool"
+const FESTEJO_REBOTE := "dm_oop_gk_idle_0_0_idle_cheer_03"
+const FUNDIDO_TRAS_REACCION := 0.5
+## Contra una picada, cuantas veces se juega a un lado antes de la patada.
+const PROB_JUGARSE_PICADA := 0.65
+
+## A que distancia delante del arquero tocan la pelota casi todas las de PES.
+const PLANO_MANOS_PES := 0.5
 
 ## Huesos que se revisan contra los palos, con el grosor aproximado del cuerpo
 ## alrededor de cada uno.
@@ -172,11 +267,13 @@ func _find_node_of_type(node: Node, type_name: String) -> Node:
 ## moverse antes de la patada, como un arquero de verdad: la animacion tiene
 ## tiempo de reproducirse entera a velocidad normal. t_hasta_patada es
 ## estimado; cuando se patea de verdad (on_ball_kicked) se resincroniza.
-func anticipar(origen: Vector3, velocidad: Vector3, t_hasta_patada: float) -> void:
+func anticipar(origen: Vector3, velocidad: Vector3, t_hasta_patada: float, picada: bool = false) -> void:
 	_anticipado = true
-	_planear(origen, velocidad, t_hasta_patada)
+	_planear(origen, velocidad, t_hasta_patada, picada)
 
 func on_ball_kicked(shot: ShotData) -> void:
+	if _ya_jugado:
+		return
 	if _anticipado and (state == GKState.ANTICIPATING or state == GKState.DIVING):
 		_resincronizar(shot)
 		return
@@ -186,16 +283,28 @@ func on_ball_kicked(shot: ShotData) -> void:
 
 ## Decide la jugada y la animacion, y programa cuando arrancarla.
 ## t_extra: segundos que faltan para que salga la pelota.
-func _planear(origen: Vector3, velocidad: Vector3, t_extra: float) -> void:
+func _planear(origen: Vector3, velocidad: Vector3, t_extra: float, picada: bool = false) -> void:
 	var prediccion := PredictionModule.calcular_target_real(origen, velocidad)
 
 	if not prediccion.es_gol_potencial:
 		# Va afuera, nos quedamos quietos o simulamos reacción tardía/corta
+		if _pes:
+			_mirar_tiro_afuera(prediccion, t_extra)
 		return
 
 	var error := ErrorModule.aplicar_error(prediccion.target, stats.error_percepcion if stats else dificultad)
 	if siempre_adivina:
 		error = {"target_percibido": prediccion.target, "delay_extra": 0.0}
+
+	# La picada es lenta: si espera a verla, la agarra. Por eso lo que le gana es
+	# que se juegue a un lado antes de la patada, como en un penal de verdad.
+	var jugado := false
+	if picada and _pes and randf() < PROB_JUGARSE_PICADA:
+		var lado := -1.0 if randf() < 0.5 else 1.0
+		var punto := Vector2(lado * randf_range(1.8, 3.0), randf_range(0.3, 1.6))
+		if DiveAnimData.AnimSelector.clasificar_zona(punto, goal_width, goal_height) != DiveAnimData.AnimSelector.clasificar_zona(prediccion.target, goal_width, goal_height):
+			error = {"target_percibido": punto, "delay_extra": 0.0}
+			jugado = true
 
 	# 1. El arquero elige zona con lo que cree (con error de percepcion).
 	var zona_elegida: DiveAnimData.Zone = DiveAnimData.AnimSelector.clasificar_zona(error.target_percibido, goal_width, goal_height)
@@ -210,11 +319,19 @@ func _planear(origen: Vector3, velocidad: Vector3, t_extra: float) -> void:
 	_contacto_hecho = false
 	_agarrada = false
 	_vel_llegada = Vector3.ZERO
+	_empalme_hecho = false
+	_ya_jugado = jugado
 
 	# 3. La animacion: SAVE si la agarra, DIVE si rebota o es gol. Se elige la
 	# que toca mas cerca de por donde el arquero cree que pasa la pelota.
 	var tipo := DiveAnimData.Tipo.SAVE if _resultado == ResultModule.Resultado.ATAJA else DiveAnimData.Tipo.DIVE
-	var anim := DiveAnimData.AnimSelector.elegir(libreria_animaciones, zona_elegida, tipo, error.target_percibido)
+	var punto_anim: Vector2 = error.target_percibido
+	var acerto := _resultado != ResultModule.Resultado.GOL
+	if _pes and acerto:
+		# Si la va a tocar, la animacion tiene que ser para donde va la pelota de
+		# verdad. El error de percepcion ya actuo al decidir si acertaba.
+		punto_anim = PredictionModule.punto_en_z(origen, velocidad, _base_position.z + PLANO_MANOS_PES).punto
+	var anim := DiveAnimData.AnimSelector.elegir(libreria_animaciones, zona_elegida, tipo, punto_anim, not (_pes and acerto))
 	if not anim:
 		print("[Goalkeeper] No hay animación disponible en la librería.")
 		return
@@ -234,7 +351,13 @@ func _planear(origen: Vector3, velocidad: Vector3, t_extra: float) -> void:
 	if t_extra > 0.0:
 		var en_la_patada := maxf(anim.despegue, anim.contact_time - en_manos.tiempo * TimingModule.VELOCIDAD_MAXIMA)
 		vuelo = anim.contact_time - en_la_patada
+		# Las de PES son cortas: entran enteras en el vuelo de la pelota, asi que
+		# no hace falta salir antes de la patada.
+		if anim.contact_time <= en_manos.tiempo:
+			vuelo = en_manos.tiempo
 	var plan := TimingModule.planificar(anim, t_extra + vuelo, error.delay_extra)
+	if jugado:
+		plan = {"delay": maxf(t_extra - anim.contact_time * 0.5, 0.0), "inicio": 0.0, "velocidad": 1.0}
 	print("[Goalkeeper] %s | zona elegida %s, real %s | %.1f m/s | %s | arranca en %.2f s desde %.2f s a %.2fx" % [
 		ResultModule.Resultado.keys()[_resultado], DiveAnimData.Zone.keys()[zona_elegida],
 		DiveAnimData.Zone.keys()[zona_real], velocidad.length(), anim.anim_name,
@@ -249,6 +372,19 @@ func _programar(plan: Dictionary) -> void:
 	if state == GKState.ANTICIPATING and id == _plan_id:
 		iniciar_dive(_current_anim, _objetivo, plan.inicio, plan.velocidad)
 
+## Tiro afuera: se queda en el lugar y lo sigue con la mirada cuando pasa.
+func _mirar_tiro_afuera(prediccion: Dictionary, t_extra: float) -> void:
+	var id := _plan_id
+	await get_tree().create_timer(t_extra + maxf(prediccion.tiempo_vuelo - 0.25, 0.0)).timeout
+	if state != GKState.IDLE or id != _plan_id:
+		return
+	var alto: bool = prediccion.target.y > goal_height
+	var anim := "pes/gkseeoff_high_react_0_0_y11" if alto else "pes/gkseeoff_side_react_0_0_y04"
+	if prediccion.target.x < 0.0:
+		anim += "__M"
+	if animation_player.has_animation(anim):
+		animation_player.play(anim, 0.3)
+
 ## La patada de verdad: se ajusta la velocidad de la animacion para que la
 ## mano llegue justo cuando llega la pelota (la estimacion del momento de la
 ## patada puede errar por unos cuadros).
@@ -256,6 +392,9 @@ func _resincronizar(shot: ShotData) -> void:
 	var en_manos := PredictionModule.punto_en_z(shot.origin, shot.initial_velocity, _base_position.z + _current_anim.canonical_target.z)
 	if state == GKState.ANTICIPATING:
 		_programar(TimingModule.planificar(_current_anim, en_manos.tiempo, 0.0))
+		return
+	# El que se jugo va a su velocidad: ya no mira la pelota.
+	if _ya_jugado:
 		return
 	var falta_anim := _current_anim.contact_time - animation_player.current_animation_position
 	if falta_anim > 0.0:
@@ -284,8 +423,7 @@ func iniciar_dive(anim: DiveAnimData, objetivo: Vector2, inicio: float = 0.0, ve
 		# fundido desde la postura de espera; mas largo si se arranca la
 		# animacion por la mitad, para tapar el salto de pose
 		animation_player.speed_scale = velocidad
-		animation_player.play(anim.anim_name, 0.2 if inicio < 0.05 else 0.3)
-		animation_player.seek(inicio, true)
+		animation_player.play_section(anim.anim_name, inicio, -1.0, 0.15 if inicio < 0.05 else 0.3)
 
 func _on_dive_terminado() -> void:
 	state = GKState.RESULT
@@ -361,10 +499,17 @@ func reset_to_idle():
 	_contacto_hecho = false
 	_agarrada = false
 	_vel_llegada = Vector3.ZERO
+	_ya_jugado = false
+	_cola_reaccion = []
 	global_position = _base_position
+	global_basis = _base_basis
 	if animation_player:
 		animation_player.speed_scale = 1.0
-	if animation_player and animation_player.has_animation("Goalkeeperidle"):
+	if _pes:
+		# Sin fundido: se ve recien cuando se va el negro entre tiros, ya en su lugar.
+		_jugar_espera(0.0)
+		animation_player.seek(0.0, true)
+	elif animation_player and animation_player.has_animation("Goalkeeperidle"):
 		animation_player.play("Goalkeeperidle")
 	if reposition_module:
 		reposition_module._stop_ik()

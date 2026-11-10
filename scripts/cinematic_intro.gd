@@ -46,9 +46,10 @@ var shots: Array[Dictionary] = [
 ]
 
 # Posición de cámara de juego en PenaltyShoutOut
-const GAMEPLAY_POS = Vector3(0.0, 1.8, 2.0)
-const GAMEPLAY_LOOK = Vector3(0.0, 1.2, -11.0)
-const GAMEPLAY_FOV = 60.0
+# Lejos y con poco FOV, como en FIFA: el arco se ve grande y el pateador no lo tapa.
+const GAMEPLAY_POS = Vector3(0.0, 2.5, 14.0)
+const GAMEPLAY_LOOK = Vector3(0.0, 1.1, -11.0)
+const GAMEPLAY_FOV = 23.0
 
 var current_tween: Tween
 

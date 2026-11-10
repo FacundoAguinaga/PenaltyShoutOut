@@ -1,6 +1,12 @@
 Espacio físico del juego/app:
 <img width="1024" height="571" alt="image" src="https://github.com/user-attachments/assets/a9c4f33b-ff53-43a7-9c04-4cf77d2274fb" />
 
+## Animaciones de PES 2021
+
+El pateador, el arquero y las cinemáticas usan animaciones extraídas de PES 2021,
+que no van a git. Cómo se extraen, cómo se convierten y cómo las usa el juego:
+[docs/animaciones_pes.md](docs/animaciones_pes.md).
+
 ## Créditos de assets de terceros
 
 | Asset | Autor | Fuente | Licencia |

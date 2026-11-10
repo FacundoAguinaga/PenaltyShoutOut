@@ -36,6 +36,11 @@ const ALTURA_TECHO := 23.0
 const FRACCION_SOMBRA := 0.0
 ## Nodos del glb que en stadium.tscn estan ocultos y no hay que copiar.
 const EXCLUIR := ["StadiumCrowd"]
+## La red fija que trae el modelo en el arco del penal: ahi se dibuja la de
+## scripts/red_arco.gd, y juntas se ven dos redes. Esta caja (en coordenadas del
+## modelo) solo deja afuera la de ese arco: la del otro lado se queda.
+const RED_FIJA_MATERIALES := ["auto_37", "auto_38"]
+const RED_FIJA_CAJA := AABB(Vector3(-5.0, -1.0, -2.0), Vector3(10.0, 5.0, 6.0))
 
 var _raiz: Node3D
 var _listo := false
@@ -178,6 +183,8 @@ func _repartir(arrays: Array, xf: Transform3D, mat: Material, bloques: Dictionar
 	var por_bloque := {}
 	for k in range(0, idx.size(), 3):
 		var centro := (vw[idx[k]] + vw[idx[k + 1]] + vw[idx[k + 2]]) / 3.0
+		if mat and mat.resource_name in RED_FIJA_MATERIALES and RED_FIJA_CAJA.has_point(centro):
+			continue
 		var clave := Vector2i(floori(centro.x / BLOQUE), floori(centro.z / BLOQUE))
 		if not por_bloque.has(clave):
 			por_bloque[clave] = []

@@ -21522,7 +21522,7 @@ script = ExtResource("5_goal_sc")
 shape = SubResource("BoxShape3D_goal")
 
 [node name="Ball" type="RigidBody3D" parent="." unique_id=2109429361]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, -2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, 0)
 script = ExtResource("4_ball_sc")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Ball" unique_id=618675182]
@@ -21539,7 +21539,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -11)
 
 [node name="BallSpawn" type="Marker3D" parent="." unique_id=711056066]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, -2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, 0)
 
 [node name="Kicker" type="Node3D" parent="." unique_id=1578962790 node_paths=PackedStringArray("animation_player", "skeleton", "ball", "plant_foot_ik", "kick_foot_ik", "plant_foot_target", "kick_foot_target")]
 script = ExtResource("2_kicker_sc")
@@ -24713,7 +24713,8 @@ elasticidad = 1.165
 estiramiento_maximo = 0.092
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=802062612]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 14)
+fov = 23.0
 
 [node name="UI" parent="." unique_id=775147583 node_paths=PackedStringArray("game_manager", "kicker", "goalkeeper", "goal_zone") instance=ExtResource("8_gee14")]
 game_manager = NodePath("..")
