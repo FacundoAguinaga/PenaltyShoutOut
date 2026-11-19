@@ -355,7 +355,7 @@ static func panel_opciones(settings: Node) -> PanelContainer:
 
 	var opciones_tiros := [5, 10, 20, 40]
 	for i in opciones_tiros.size():
-		tiros.add_item("%d tiros" % opciones_tiros[i], i)
+		tiros.add_item("%d rondas" % opciones_tiros[i], i)
 	if settings:
 		var actual := opciones_tiros.find(settings.shots_per_round)
 		tiros.selected = actual if actual != -1 else 0

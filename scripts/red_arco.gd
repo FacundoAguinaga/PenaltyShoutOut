@@ -60,6 +60,9 @@ class_name RedArco
 @export var masa_red: float = 6.0
 ## Elasticidad de los hilos (compliance de XPBD, en m/N). 0 = hilo que no
 ## estira nada. Valores mas altos dejan que la pelota hunda mas la red.
+## Ojo: por encima de ~0,001 los hilos dejan de actuar (con 1,165 cada nudo se movia solo,
+## la red se hundia como una carpa en punta y la pelota que caia en el techo lo atravesaba).
+## La hondura de la bolsa se regula con holgura y estiramiento_maximo, no con esto.
 @export var elasticidad: float = 0.00001
 ## Cuanto mas que su largo puede estirarse la red en total antes de frenar en
 ## seco. Junto con la holgura define la profundidad maxima de la bolsa.
@@ -93,6 +96,8 @@ const ALTURA_TELA_EN_PISO := 0.07
 const HUNDIDA_MAXIMA := 0.1
 ## Red de seguridad: la pelota de adentro no sale de la caja de la red mas esto.
 const BOLSA_MAXIMA := 1.0
+## Cuanto mas se puede embolsar por cada metro que la pelota esta sobre el pasto.
+const BOLSA_POR_ALTURA := 2.0
 
 # --- Simulacion (indices de particula) ---
 var _x := PackedVector3Array()   # posicion actual
@@ -414,9 +419,15 @@ func _physics_process(dt: float) -> void:
 	_actualizar_malla()
 	_quizas_dormir(cerca)
 
+## La caja de la bolsa se angosta contra el pasto: abajo la red esta clavada al piso y,
+## aunque arriba se pueda embolsar casi un metro, al ras no hay tela para eso. Sin esto un
+## tiro fuerte y bajo al palo aplastaba la primera fila de tela contra el pasto (que la
+## pelota pisa sin chocar, ver _resolver_contactos) y se iba rodando por debajo.
 func _limitar_a_la_bolsa(p: Vector3) -> Vector3:
-	var mitad := ancho * 0.5 + BOLSA_MAXIMA
-	return Vector3(clampf(p.x, -mitad, mitad), minf(p.y, alto + BOLSA_MAXIMA), maxf(p.z, -profundidad - BOLSA_MAXIMA))
+	var r := _radio_pelota
+	var bolsa := minf(BOLSA_MAXIMA, maxf(0.0, p.y - r) * BOLSA_POR_ALTURA) - r * 0.6
+	var mitad := ancho * 0.5 + bolsa
+	return Vector3(clampf(p.x, -mitad, mitad), minf(p.y, alto + BOLSA_MAXIMA), maxf(p.z, -profundidad - bolsa))
 
 func _pelota_cerca(dt: float) -> bool:
 	if pelota == null or not pelota.is_inside_tree():

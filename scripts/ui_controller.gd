@@ -2,11 +2,15 @@ extends CanvasLayer
 
 ## HUD del partido, con el mismo estilo que el menu (EstiloUI): texto alineado
 ## a la izquierda, sin cajas, acento dorado.
-##   - arriba a la izquierda: tiro actual, marcador e historial de tiros
+##   - arriba a la izquierda: ronda, marcador de la tanda (circulos verdes y
+##     rojos por tiro), equipos y quien patea
 ##   - arriba a la derecha: PAUSA
 ##   - abajo a la izquierda: potencia (con la zona optima marcada) y ayuda
 ##   - centro: cartel del resultado (GOLAZO, ATAJADA, AFUERA)
-##   - en el arco: la mira
+##   - en el arco: la mira del pateador o la zona elegida por el arquero
+##
+## La mira del pateador NUNCA se muestra cuando el jugador ataja: si no, el
+## rival estaria delatando adonde va a patear.
 
 @export var game_manager: GameManager
 @export var kicker: PlayerKicker
@@ -27,13 +31,21 @@ const ANCHO_POTENCIA := 280.0
 const COLOR_GOL := EstiloUI.COLOR_ACENTO
 const COLOR_ATAJADA := EstiloUI.COLOR_PELIGRO
 const COLOR_AFUERA := EstiloUI.COLOR_GRIS
+## Circulos del marcador de tanda: verde gol, rojo errado (atajada o afuera).
+const COLOR_DOT_GOL := Color(0.24, 0.84, 0.38)
+const COLOR_DOT_FALLO := Color(0.90, 0.22, 0.22)
+const TAMANO_DOT := 15
 
-var _shot_history: Array[String] = [] # "goal", "save", "miss"
 var _raiz: Control
 var _contador: Label
+var _turno: Label
 var _goles_tirador: Label
 var _goles_arquero: Label
-var _historial: HBoxContainer
+var _historial_jugador: HBoxContainer
+var _historial_rival: HBoxContainer
+var _sale: Label
+var _sigue: Label
+var _lineup: HBoxContainer
 var _mira: Control
 var _potencia: Control
 var _potencia_valor: Label
@@ -54,6 +66,7 @@ func _ready():
 	_connect_signals()
 	_update_score_display()
 	_update_shot_counter()
+	_update_turno_info()
 	_refresh_shot_history_ui()
 	_setup_controls_help()
 	_animar_entrada()
@@ -93,7 +106,7 @@ func _armar() -> void:
 	var c := EstiloUI.COLOR_OSCURO
 	var arriba := EstiloUI.degradado(PackedColorArray([Color(c, 0.6), Color(c, 0.0)]), PackedFloat32Array([0.0, 1.0]), true)
 	arriba.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	arriba.offset_bottom = 200
+	arriba.offset_bottom = 250
 	_raiz.add_child(arriba)
 	var abajo := EstiloUI.degradado(PackedColorArray([Color(c, 0.0), Color(c, 0.55)]), PackedFloat32Array([0.0, 1.0]), true)
 	abajo.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -119,29 +132,46 @@ func _armar_marcador() -> void:
 	var v := VBoxContainer.new()
 	v.name = "Marcador"
 	v.position = Vector2(56, 36)
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", 5)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_raiz.add_child(v)
 
-	_contador = EstiloUI.label("TIRO 1 / 5", 13, EstiloUI.COLOR_ACENTO, EstiloUI.fuente(600, 5))
+	_contador = EstiloUI.label("RONDA 1 / 5", 13, EstiloUI.COLOR_ACENTO, EstiloUI.fuente(600, 5))
 	v.add_child(_contador)
 
 	var fila := HBoxContainer.new()
 	fila.add_theme_constant_override("separation", 22)
 	fila.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(fila)
-	_goles_tirador = _columna_marcador(fila, "TIRADOR")
+	_goles_tirador = _columna_marcador(fila, "TU EQUIPO")
 	var sep := ColorRect.new()
 	sep.color = Color(1, 1, 1, 0.18)
 	sep.custom_minimum_size = Vector2(1, 0)
 	sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fila.add_child(sep)
-	_goles_arquero = _columna_marcador(fila, "ARQUERO")
+	_goles_arquero = _columna_marcador(fila, "RIVAL")
 
-	_historial = HBoxContainer.new()
-	_historial.add_theme_constant_override("separation", 8)
-	_historial.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(_historial)
+	_turno = EstiloUI.label("PATEÁS VOS", 13, EstiloUI.COLOR_TEXTO, EstiloUI.fuente(700, 3))
+	v.add_child(_turno)
+
+	# Una fila por equipo, como el marcador de tanda de la tele.
+	_historial_jugador = _fila_historial(v, "VOS")
+	_historial_rival = _fila_historial(v, "RIVAL")
+
+	var sale_vacio := Control.new()
+	sale_vacio.custom_minimum_size = Vector2(0, 2)
+	sale_vacio.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(sale_vacio)
+
+	_sale = EstiloUI.label("SALE: ACOSTA", 14, EstiloUI.COLOR_TEXTO, EstiloUI.fuente(700, 2))
+	v.add_child(_sale)
+	_sigue = EstiloUI.label("SIGUE: BENÍTEZ", 11, Color(EstiloUI.COLOR_GRIS, 0.9), EstiloUI.fuente(500, 1))
+	v.add_child(_sigue)
+
+	_lineup = HBoxContainer.new()
+	_lineup.add_theme_constant_override("separation", 10)
+	_lineup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(_lineup)
 
 
 func _columna_marcador(padre: Control, nombre: String) -> Label:
@@ -154,6 +184,22 @@ func _columna_marcador(padre: Control, nombre: String) -> Label:
 	EstiloUI.sombra(n, 0.3, 3)
 	c.add_child(n)
 	return n
+
+
+func _fila_historial(padre: Control, nombre: String) -> HBoxContainer:
+	var fila := HBoxContainer.new()
+	fila.add_theme_constant_override("separation", 8)
+	fila.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	padre.add_child(fila)
+	var etiqueta := EstiloUI.label(nombre, 10, EstiloUI.COLOR_GRIS, EstiloUI.fuente(600, 3))
+	etiqueta.custom_minimum_size = Vector2(44, 0)
+	etiqueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	fila.add_child(etiqueta)
+	var dots := HBoxContainer.new()
+	dots.add_theme_constant_override("separation", 5)
+	dots.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fila.add_child(dots)
+	return dots
 
 
 ## Mira: un aro fino con un punto en el centro.
@@ -229,8 +275,7 @@ func _armar_potencia() -> void:
 	_potencia_relleno.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_potencia.add_child(_potencia_relleno)
 
-	_ayuda = EstiloUI.label("WASD  apuntar      ESPACIO  mantener y soltar para patear      SHIFT + soltar  picarla", 12,
-		Color(EstiloUI.COLOR_GRIS, 0.8), EstiloUI.fuente(500, 2))
+	_ayuda = EstiloUI.label("", 12, Color(EstiloUI.COLOR_GRIS, 0.85), EstiloUI.fuente(500, 2))
 	_ayuda.anchor_top = 1.0
 	_ayuda.anchor_bottom = 1.0
 	_ayuda.offset_left = EstiloUI.MARGEN * 0.6
@@ -278,6 +323,8 @@ func _connect_signals():
 		game_manager.ball_saved.connect(_on_ball_saved)
 		game_manager.ball_missed.connect(_on_ball_missed)
 		game_manager.shot_complete.connect(_on_shot_complete)
+		if game_manager.has_signal("tanda_actualizada"):
+			game_manager.tanda_actualizada.connect(_on_tanda_actualizada)
 		if game_manager.has_signal("game_over"):
 			game_manager.game_over.connect(_on_game_over)
 
@@ -292,6 +339,12 @@ func _process(delta: float):
 	_update_power_bar()
 
 
+func _jugador_patea() -> bool:
+	if not game_manager:
+		return true
+	return game_manager.turno == GameManager.Lado.JUGADOR
+
+
 func _color_potencia() -> Color:
 	var power = kicker.get_power()
 	if power >= kicker.optimal_power_min and power <= kicker.optimal_power_max:
@@ -302,7 +355,19 @@ func _color_potencia() -> Color:
 
 
 func _update_aim_reticle():
-	if not _mira or not kicker:
+	if not _mira:
+		return
+	if _jugador_patea():
+		_update_kicker_reticle()
+	else:
+		_update_keeper_reticle()
+
+
+## Mira del pateador: solo existe cuando patea el jugador. Mientras ataja, no
+## se muestra nada del tiro rival.
+func _update_kicker_reticle():
+	if not kicker:
+		_mira.visible = false
 		return
 
 	var is_aiming = kicker.current_state in [PlayerKicker.KickState.AIMING, PlayerKicker.KickState.CHARGING]
@@ -314,22 +379,54 @@ func _update_aim_reticle():
 	var aim_local = kicker.get_current_aim()
 	var goal_pos = goal_zone.global_position if goal_zone else Vector3(0, 1.22, -12)
 	var aim_world = Vector3(goal_pos.x + aim_local.x, aim_local.y, goal_pos.z)
-
-	var camera = get_viewport().get_camera_3d()
-	if camera:
-		if camera.is_position_behind(aim_world):
-			_mira.visible = false
-			return
-		_mira.position = camera.unproject_position(aim_world) - _mira.size / 2
-	else:
-		_mira.position = Vector2(640, 360)
+	var pos := _proyectar(aim_world)
+	if pos == Vector2.INF:
+		_mira.visible = false
+		return
+	_mira.position = pos - _mira.size / 2
 	_mira.modulate = _color_potencia()
+
+
+## Mientras el jugador ataja, la mira muestra la zona elegida para tirarse
+## (no la del pateador rival).
+func _update_keeper_reticle():
+	if not goalkeeper or not goalkeeper.es_control_humano():
+		_mira.visible = false
+		return
+	var activo: bool = goalkeeper.state in [
+		PlayerGoalkeeper.GKState.CONTROL,
+		PlayerGoalkeeper.GKState.DIVING,
+		PlayerGoalkeeper.GKState.ANTICIPATING,
+	]
+	if not activo or not goalkeeper.tirada_elegida():
+		_mira.visible = false
+		return
+	var p := goalkeeper.get_objetivo_tirada_visual()
+	if absf(p.x) > 100.0:
+		_mira.visible = false
+		return
+	var goal_pos = goal_zone.global_position if goal_zone else Vector3(0, 1.22, -12)
+	var world = Vector3(goal_pos.x + p.x, p.y, goal_pos.z)
+	var pos := _proyectar(world)
+	if pos == Vector2.INF:
+		_mira.visible = false
+		return
+	_mira.visible = true
+	_mira.position = pos - _mira.size / 2
+	_mira.modulate = reticle_color_optimal
+
+
+func _proyectar(world: Vector3) -> Vector2:
+	var camera = get_viewport().get_camera_3d()
+	if not camera or camera.is_position_behind(world):
+		return Vector2.INF
+	return camera.unproject_position(world)
 
 
 func _update_power_bar():
 	if not _potencia or not kicker:
 		return
-	var is_active = kicker.current_state in [PlayerKicker.KickState.AIMING, PlayerKicker.KickState.CHARGING]
+	var is_active = _jugador_patea() and kicker.current_state in [PlayerKicker.KickState.AIMING, PlayerKicker.KickState.CHARGING]
 	_potencia.visible = is_active
 	if not is_active:
 		return
@@ -341,41 +438,103 @@ func _update_power_bar():
 	_potencia_valor.add_theme_color_override("font_color", color)
 
 
+# --------------------------------------------------------------- marcador
+
 func _update_score_display():
 	if game_manager:
-		_goles_tirador.text = str(game_manager.kicker_score)
-		_goles_arquero.text = str(game_manager.goalkeeper_score)
+		_goles_tirador.text = str(game_manager.goles_jugador)
+		_goles_arquero.text = str(game_manager.goles_rival)
 
 
 func _update_shot_counter():
-	if game_manager:
-		_contador.text = "TIRO %d / %d" % [game_manager.current_shot, game_manager.shots_per_round]
+	if not game_manager:
+		return
+	_contador.text = game_manager.texto_ronda()
+	if game_manager.en_muerte_subita():
+		_contador.add_theme_color_override("font_color", COLOR_ATAJADA)
+	else:
+		_contador.add_theme_color_override("font_color", EstiloUI.COLOR_ACENTO)
 
 
-## Un punto por tiro: dorado gol, rojo atajada, gris afuera, aro vacio el que falta.
+func _update_turno_info():
+	if not game_manager:
+		return
+	if game_manager.turno == GameManager.Lado.JUGADOR:
+		_turno.text = "PATEÁS VOS"
+		_turno.add_theme_color_override("font_color", EstiloUI.COLOR_ACENTO)
+		_sale.text = "SALE: %s" % game_manager.nombre_pateador_actual()
+		_sigue.text = "SIGUE: %s" % game_manager.nombre_siguiente_pateador()
+	else:
+		_turno.text = "ATAJÁS VOS"
+		_turno.add_theme_color_override("font_color", EstiloUI.COLOR_PELIGRO)
+		_sale.text = "PATEA: %s" % game_manager.nombre_pateador_actual()
+		_sigue.text = "ELEGÍ LADO Y ALTURA, Y TIRATE"
+	_actualizar_lineup()
+
+
+## La fila de cinco companeros del equipo que patea, con el que sale resaltado.
+func _actualizar_lineup():
+	if not _lineup or not game_manager:
+		return
+	for child in _lineup.get_children():
+		child.queue_free()
+	var plantel: Array = game_manager.plantel_del_turno()
+	var actual: int = game_manager.indice_pateador_actual()
+	var etiqueta := EstiloUI.label("FILA", 9, EstiloUI.COLOR_GRIS, EstiloUI.fuente(600, 3))
+	etiqueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_lineup.add_child(etiqueta)
+	for i in plantel.size():
+		var es_actual := i == actual
+		var col := EstiloUI.COLOR_ACENTO if es_actual else Color(EstiloUI.COLOR_GRIS, 0.7)
+		var l := EstiloUI.label(str(plantel[i]["nombre"]), 10, col, EstiloUI.fuente(700 if es_actual else 500, 1))
+		_lineup.add_child(l)
+
+
+## Cuantos circulos mostrar: 5 por lado, mas los que haga falta en muerte subita.
+func _dots_totales() -> int:
+	if not game_manager:
+		return 5
+	var rj: int = game_manager.resultados_jugador.size()
+	var rr: int = game_manager.resultados_rival.size()
+	var n: int = maxi(5, maxi(rj, rr))
+	if not game_manager.tanda_terminada and rj >= 5 and rr >= 5 and rj == rr:
+		n += 1
+	return n
+
+
+## Un punto por tiro: verde gol, rojo errado (atajada o afuera), aro el que
+## falta. El que esta por patear se marca en dorado.
 func _refresh_shot_history_ui():
-	for child in _historial.get_children():
+	if not game_manager:
+		return
+	var total := _dots_totales()
+	_llenar_dots(_historial_jugador, game_manager.resultados_jugador, total, 0)
+	_llenar_dots(_historial_rival, game_manager.resultados_rival, total, 1)
+
+
+func _llenar_dots(contenedor: HBoxContainer, resultados: Array[String], total: int, lado: int) -> void:
+	for child in contenedor.get_children():
 		child.queue_free()
 
-	var total_shots = game_manager.shots_per_round if game_manager else 5
-	# a lo sumo 10 puntos para que no se desborde
-	var max_visible_dots = min(total_shots, 10)
-
-	for i in range(max_visible_dots):
-		var dot = Panel.new()
-		dot.custom_minimum_size = Vector2(10, 10)
+	var es_turno: bool = game_manager.turno == lado and not game_manager.tanda_terminada \
+		and game_manager.current_state != GameManager.PenaltyState.RESULT
+	for i in range(total):
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(TAMANO_DOT, TAMANO_DOT)
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var style = StyleBoxFlat.new()
-		style.set_corner_radius_all(5)
-		if i < _shot_history.size():
-			var res = _shot_history[i]
-			style.bg_color = COLOR_GOL if res == "goal" else (COLOR_ATAJADA if res == "save" else COLOR_AFUERA)
+		var style := StyleBoxFlat.new()
+		style.set_corner_radius_all(TAMANO_DOT / 2)
+		if i < resultados.size():
+			style.bg_color = COLOR_DOT_GOL if resultados[i] == "goal" else COLOR_DOT_FALLO
 		else:
 			style.draw_center = false
-			style.set_border_width_all(1)
-			style.border_color = Color(1, 1, 1, 0.35)
+			style.set_border_width_all(2)
+			if es_turno and i == resultados.size():
+				style.border_color = EstiloUI.COLOR_ACENTO
+			else:
+				style.border_color = Color(1, 1, 1, 0.28)
 		dot.add_theme_stylebox_override("panel", style)
-		_historial.add_child(dot)
+		contenedor.add_child(dot)
 
 
 ## Cartel del resultado: aparece agrandandose apenas, dibuja la linea y se va
@@ -402,42 +561,64 @@ func _show_status_banner(text: String, color: Color):
 	_cartel_tween.tween_property(_cartel, "position:y", y - 24.0, 0.45).set_ease(Tween.EASE_IN)
 
 
+func _texto_ayuda() -> String:
+	if not _jugador_patea():
+		return "FLECHAS  mover al arquero      ESPACIO + flecha  tirarse      ↑↓  altura"
+	return "WASD  apuntar      ESPACIO  mantener y soltar para patear      SHIFT + soltar  picarla"
+
+
 func _setup_controls_help():
 	var settings = get_node_or_null("/root/SettingsManager")
 	_ayuda.visible = settings.show_controls_help if settings else true
+	_ayuda.text = _texto_ayuda()
 
+
+# ------------------------------------------------------------------ eventos
 
 func _on_penalty_started():
 	_update_score_display()
 	_update_shot_counter()
+	_update_turno_info()
+	_refresh_shot_history_ui()
+	_ayuda.text = _texto_ayuda()
+
+
+func _on_tanda_actualizada():
+	_update_score_display()
+	_update_shot_counter()
+	_update_turno_info()
+	_refresh_shot_history_ui()
 
 
 func _on_kick_released(_power: float, _kick_target: Vector3):
-	if _ayuda.visible:
-		# la ayuda se va despues del primer tiro
-		var tween = create_tween()
-		tween.tween_property(_ayuda, "modulate:a", 0.0, 0.5)
-		await tween.finished
-		_ayuda.visible = false
+	# La ayuda queda visible: en la tanda cambia de significado entre patear y
+	# atajar, asi que no conviene esconderla despues del primer tiro.
+	pass
 
 
 func _on_goal_scored(_kicker_name: String):
-	_show_status_banner("GOLAZO", COLOR_GOL)
+	if _jugador_patea():
+		_show_status_banner("GOLAZO", COLOR_GOL)
+	else:
+		_show_status_banner("GOL DEL RIVAL", COLOR_ATAJADA)
 	_update_score_display()
-	_shot_history.append("goal")
 	_refresh_shot_history_ui()
 
 
 func _on_ball_saved():
-	_show_status_banner("ATAJADA", COLOR_ATAJADA)
+	if _jugador_patea():
+		_show_status_banner("ATAJADA", COLOR_ATAJADA)
+	else:
+		_show_status_banner("ATAJADÓN TUYO", COLOR_GOL)
 	_update_score_display()
-	_shot_history.append("save")
 	_refresh_shot_history_ui()
 
 
 func _on_ball_missed():
-	_show_status_banner("AFUERA", EstiloUI.COLOR_TEXTO)
-	_shot_history.append("miss")
+	if _jugador_patea():
+		_show_status_banner("AFUERA", EstiloUI.COLOR_TEXTO)
+	else:
+		_show_status_banner("AFUERA DEL RIVAL", EstiloUI.COLOR_TEXTO)
 	_refresh_shot_history_ui()
 
 

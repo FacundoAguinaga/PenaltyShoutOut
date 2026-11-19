@@ -14,6 +14,12 @@ var _is_diving: bool = false
 var _ik_started: bool = false
 var _corregir_con_ik: bool = true
 var _inicio: float = 0.0
+## Donde arranca el cuerpo respecto de la base: si antes amago, ya esta corrido. Entra al
+## ritmo del fundido entre el amague y la estirada: mientras la pose del amague (con la
+## cadera corrida) se va, el arquero se corre lo mismo y la cadera no salta.
+var _desde: Vector3 = Vector3.ZERO
+var _fundido: float = 0.0
+var _arranque_ms: int = 0
 
 func _init(arquero_root: Node3D, anim_player: AnimationPlayer, skeleton_ik: TwoBoneIK3D):
 	_arquero_root = arquero_root
@@ -24,8 +30,12 @@ func _init(arquero_root: Node3D, anim_player: AnimationPlayer, skeleton_ik: TwoB
 ## lado que eligio, pero no se le estira la mano hasta la pelota (si no, un gol
 ## se veria como atajada).
 ## inicio: segundo de la animacion desde el que se arranca (ver TimingModule).
-func iniciar_offset(target_percibido: Vector2, anim: DiveAnimData, base_pos: Vector3, corregir_con_ik: bool = true, inicio: float = 0.0) -> void:
+func iniciar_offset(target_percibido: Vector2, anim: DiveAnimData, base_pos: Vector3, corregir_con_ik: bool = true, inicio: float = 0.0, desde := Vector3.ZERO, fundido := 0.0) -> void:
 	_anim = anim
+	_desde = desde
+	_fundido = fundido
+	_arranque_ms = Time.get_ticks_msec()
+	offset_actual = Vector3.ZERO
 	_corregir_con_ik = corregir_con_ik
 	_inicio = inicio
 	_pos_base_arquero = base_pos
@@ -69,7 +79,9 @@ func process_frame(delta: float) -> void:
 		# parado, que se veria como patinar) y con arranque y frenada suaves.
 		var desde := maxf(_inicio, _anim.contact_time - VENTANA_CORRIMIENTO)
 		var progreso: float = (current_pos - desde) / (_anim.contact_time - desde)
-		offset_actual = offset_objetivo * smoothstep(0.0, 1.0, progreso)
+		# El fundido de Godot va en tiempo real, no en el de la animacion.
+		var entrada := clampf((Time.get_ticks_msec() - _arranque_ms) / 1000.0 / maxf(_fundido, 0.001), 0.0, 1.0)
+		offset_actual = (_desde * entrada).lerp(offset_objetivo, smoothstep(0.0, 1.0, progreso))
 		_arquero_root.global_position = _pos_base_arquero + offset_actual
 		
 		# Activar IK si estamos cerca del momento de contacto (ej: 0.15s antes)

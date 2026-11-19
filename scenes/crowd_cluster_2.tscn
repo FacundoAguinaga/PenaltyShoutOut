@@ -1,13 +1,13 @@
-[gd_scene format=4 uid="uid://dhmq27jcfkte"]
+[gd_scene format=4 uid="uid://i7oe3gsnadu0"]
 
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 2 lod 0_texture_pbr_20250901.png" id="1_kohdb"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 2 lod 0_texture_pbr_20250901_metallic-texture_pbr_20250901_roughness.png" id="2_obvrp"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 2 lod 0_texture_pbr_20250901_normal.png" id="3_0gvlf"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 2 lod 1_texture_pbr_20250901.png" id="4_xdeqe"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 2 lod 1_texture_pbr_20250901_metallic-texture_pbr_20250901_roughness.png" id="5_p5t06"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 2 lod 1_texture_pbr_20250901_normal.png" id="6_xs4gx"]
+[ext_resource type="Material" path="res://resources/crowd_lod2_mat2.tres" id="7_66xcj"]
 [ext_resource type="Script" path="res://scripts/crowd_cluster.gd" id="8_crowd"]
-[ext_resource type="Texture2D" uid="uid://bora55m6c2mbk" path="res://assets/models/people/tribuna 2 lod 0_texture_pbr_20250901.png" id="1_kohdb"]
-[ext_resource type="Texture2D" uid="uid://totvluabbife" path="res://assets/models/people/tribuna 2 lod 0_texture_pbr_20250901_metallic-texture_pbr_20250901_roughness.png" id="2_obvrp"]
-[ext_resource type="Texture2D" uid="uid://cfasslmqy1ath" path="res://assets/models/people/tribuna 2 lod 0_texture_pbr_20250901_normal.png" id="3_0gvlf"]
-[ext_resource type="Texture2D" uid="uid://cfk83svn3p2d" path="res://assets/models/people/tribuna 2 lod 1_texture_pbr_20250901.png" id="4_xdeqe"]
-[ext_resource type="Texture2D" uid="uid://bktyfupsn8htt" path="res://assets/models/people/tribuna 2 lod 1_texture_pbr_20250901_metallic-texture_pbr_20250901_roughness.png" id="5_p5t06"]
-[ext_resource type="Texture2D" uid="uid://bycromxh22qnu" path="res://assets/models/people/tribuna 2 lod 1_texture_pbr_20250901_normal.png" id="6_xs4gx"]
-[ext_resource type="Material" uid="uid://va8blqb6funo" path="res://resources/crowd_lod2_mat2.tres" id="7_66xcj"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2ov6o"]
 resource_name = "Material.001"

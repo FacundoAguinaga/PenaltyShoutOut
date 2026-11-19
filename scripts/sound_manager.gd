@@ -82,11 +82,35 @@ var sfx_crowd_chant: AudioStreamPlayer
 var sfx_crowd_boo: AudioStreamPlayer
 var sfx_crowd_anticipation: AudioStreamPlayer
 
+# Sonidos de PES (tools/pes_extraer_sonidos.py), si estan extraidos. Como las animaciones,
+# no van a git: sin ellos quedan los de audio/.
+const PES_SONIDOS := "res://animaciones_pes/sonidos/"
+## Volumen de cada grupo de sonidos de PES, para quedar a la altura de los de audio/ (se
+## midio el volumen medio de cada uno con ffmpeg: rondan los mismos -15 a -20 dB). El gol
+## va arriba; el "uh", la atajada y el abucheo, sin tapar la pelota ni al arquero.
+const PES_VOLUMEN := {"gol": 6.0, "uh": 0.0, "atajada": -1.0, "abucheo": -3.0, "silbato": 1.0, "expectativa": 2.0, "golpe": 3.0, "pique": -4.0}
+## Los golpes de la pelota (SE_Movement): de cada uno PES tiene 5 fuerzas (_01 a _05).
+const PES_GOLPES := {
+	"patada": "BALLHIT_INSTEP", "red": "BALLHIT_GOALNET", "palo": "BALLHIT_GOALPOST",
+	"travesano": "BALLHIT_GOALBAR", "pique": "BALLHIT_BOUND", "agarra": "GK_CATCH", "rechazo": "GK_PUNCH",
+}
+## Cuantos sonidos de PES pueden sonar a la vez (la tribuna suena en capas).
+const PES_VOCES := 6
+## Un abucheo despues de un tiro errado, no siempre.
+const PROB_ABUCHEO := 0.4
+var _pes := {}
+## Por golpe, las fuerzas que hay: {"red": {3: [streams], 4: [...]}, ...}
+var _golpes := {}
+var _pes_voces: Array[AudioStreamPlayer] = []
+## La voz de la expectativa, para apagarla cuando llega el desenlace.
+var _voz_expectativa: AudioStreamPlayer
+
 signal song_changed(title: String, artist: String)
 signal crowd_celebration_triggered(duration: float)
 
 func _ready() -> void:
 	_setup_audio_buses()
+	_cargar_pes()
 	_setup_ambient_players()
 	_setup_music_player()
 	_setup_sfx_players()
@@ -142,7 +166,7 @@ func _setup_ambient_players() -> void:
 	add_child(_ambient_a)
 	add_child(_ambient_b)
 	
-	_ambient_stream = _find_audio_stream("res://audio/crowd_ambient")
+	_ambient_stream = _pes["ambiente"][0] if _pes.has("ambiente") else _find_audio_stream("res://audio/crowd_ambient")
 	if _ambient_stream:
 		_ambient_duration = _ambient_stream.get_length()
 		_ambient_a.stream = _ambient_stream
@@ -324,39 +348,170 @@ func stop_stadium_ambience() -> void:
 	_ambient_a.stop()
 	_ambient_b.stop()
 
+# ---------------------------------------------------------------- SONIDOS DE PES
+## Arma los grupos de sonidos de PES a partir de sonidos.json (lo que mide el extractor).
+## Se eligen por lo que son, no por su lugar en el banco:
+## - ambiente: el CZ_Base parejo y mas fuerte (58 s).
+## - gol: un arranque de los cortos compartidos (2-3 s) mas un cuerpo que se va apagando
+##   (los rugidos de 20-30 s de Goal y el "yeah" de 9-11 s de Goal_YEAH).
+## - uh: la ola de "ohh" de Goal_OHH (7-9 s, pareja), para el tiro errado.
+## - atajada: los "uuh" fuertes de Surprise. abucheo: Anger.
+## - expectativa: el murmullo que crece antes del tiro (Special_CK, el de antes de un
+##   corner, que sube de -34 a -24 dB en 14 s, y los de Special_Pass, que crecen y se
+##   sostienen). Otros Special son copias de estos.
+## - silbatos de un arbitro (A-F) por partido: el corto (un pitazo de menos de 0,35 s), el
+##   del penal (un pitazo de 0,7-1,6 s) y el del final (el de mas pitazos).
+func _cargar_pes() -> void:
+	var json := PES_SONIDOS + "sonidos.json"
+	if not FileAccess.file_exists(json):
+		return
+	var indice: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(json))
+	var de := func(banco: String, filtro: Callable) -> Array:
+		return (indice.get(banco, []) as Array).filter(filtro)
+	var grupos := {
+		"ambiente": [(de.call("SE_Cheers_CZ_Base", func(x): return x["duracion"] > 30.0) as Array).reduce(func(a, b): return a if a["volumen_db"] > b["volumen_db"] else b)],
+		"gol_arranque": de.call("SE_Cheers_CM_Goal", func(x): return x["duracion"] < 3.0),
+		"gol_cuerpo": de.call("SE_Cheers_CM_Goal", func(x): return x["duracion"] > 20.0) + de.call("SE_Cheers_CM_Goal_YEAH", func(x): return x["duracion"] > 9.0 and x["duracion"] < 12.0),
+		"uh": de.call("SE_Cheers_CM_Goal_OHH", func(x): return x["duracion"] > 7.0 and x["duracion"] < 9.0),
+		"atajada": de.call("SE_Cheers_CM_Surprise", func(x): return x["volumen_db"] > -20.0),
+		"abucheo": de.call("SE_Cheers_CM_Anger", func(x): return true),
+		"expectativa": de.call("SE_Cheers_CM_Special_CK", func(x): return true) + de.call("SE_Cheers_CM_Special_Pass", func(x): return true) + de.call("SE_Cheers_CM_Special_Pass_A", func(x): return true),
+	}
+	var arbitro: Array = indice.get("SE_Referee_" + "ABCDEF"[randi() % 6], [])
+	if not arbitro.is_empty():
+		grupos["silbato_corto"] = arbitro.filter(func(x): return x["pitazos"] == 1 and x["sonando"] < 0.35)
+		grupos["silbato"] = arbitro.filter(func(x): return x["pitazos"] == 1 and x["sonando"] >= 0.7 and x["sonando"] <= 1.6)
+		var final: Dictionary = arbitro.reduce(func(a, b): return b if [b["pitazos"], b["sonando"]] > [a["pitazos"], a["sonando"]] else a)
+		grupos["silbato_final"] = [final]
+	for grupo: String in grupos:
+		var streams: Array[AudioStream] = []
+		for x in grupos[grupo]:
+			if x == null:
+				continue
+			var stream := AudioStreamOggVorbis.load_from_file(ProjectSettings.globalize_path(PES_SONIDOS + str(x["archivo"])))
+			if stream:
+				streams.append(stream)
+		if not streams.is_empty():
+			_pes[grupo] = streams
+	for x: Dictionary in indice.get("SE_Movement", []):
+		var cue := str(x["cue"]).trim_prefix("SE_PL_")
+		var nivel := int(cue.get_slice("_", cue.get_slice_count("_") - 1))
+		var base := cue.left(cue.rfind("_"))
+		for tipo: String in PES_GOLPES:
+			if PES_GOLPES[tipo] == base:
+				var stream := AudioStreamOggVorbis.load_from_file(ProjectSettings.globalize_path(PES_SONIDOS + str(x["archivo"])))
+				if stream:
+					var niveles: Dictionary = _golpes.get_or_add(tipo, {})
+					(niveles.get_or_add(nivel, []) as Array).append(stream)
+	for i in PES_VOCES:
+		var voz := AudioStreamPlayer.new()
+		voz.bus = "SFX"
+		add_child(voz)
+		_pes_voces.append(voz)
+	print("[SoundManager] Sonidos de PES: ", _pes.keys(), " golpes: ", _golpes.keys())
+
+## Suena uno al azar del grupo, en una voz libre (o en la que hace mas que suena).
+## El desenlace de un tiro apaga la expectativa que venia sonando.
+func _pes_sonar(grupo: String, volumen_db: float) -> bool:
+	if not _pes.has(grupo):
+		return false
+	if grupo in ["gol_cuerpo", "uh", "atajada"]:
+		_apagar_expectativa()
+	var voz := _pes_voces[0]
+	for v in _pes_voces:
+		if not v.playing:
+			voz = v
+			break
+		if v.get_playback_position() > voz.get_playback_position():
+			voz = v
+	voz.stream = (_pes[grupo] as Array).pick_random()
+	voz.volume_db = volumen_db
+	voz.play()
+	if grupo == "expectativa":
+		_voz_expectativa = voz
+	return true
+
+## Un golpe de la pelota con la fuerza de PES mas cercana (fuerza 0 a 1 -> _01 a _05).
+func _golpe_pes(tipo: String, fuerza: float, volumen_db: float) -> bool:
+	if not _golpes.has(tipo):
+		return false
+	var niveles: Dictionary = _golpes[tipo]
+	var buscado := 1 + roundi(clampf(fuerza, 0.0, 1.0) * 4.0)
+	var mejor: int = niveles.keys()[0]
+	for n: int in niveles:
+		if absi(n - buscado) < absi(mejor - buscado):
+			mejor = n
+	var voz := _pes_voces[0]
+	for v in _pes_voces:
+		if not v.playing:
+			voz = v
+			break
+	voz.stream = (niveles[mejor] as Array).pick_random()
+	voz.volume_db = volumen_db
+	voz.play()
+	return true
+
+func _apagar_expectativa() -> void:
+	if not _voz_expectativa or not _voz_expectativa.playing:
+		return
+	var voz := _voz_expectativa
+	_voz_expectativa = null
+	var t := create_tween()
+	t.tween_property(voz, "volume_db", -40.0, 0.6)
+	t.tween_callback(voz.stop)
+
 # ---------------------------------------------------------------- EVENTOS SFX
 func play_whistle() -> void:
-	_play(sfx_whistle)
+	if not _pes_sonar("silbato", PES_VOLUMEN["silbato"]):
+		_play(sfx_whistle)
 
 func play_whistle_long() -> void:
-	_play(sfx_whistle_long)
+	if not _pes_sonar("silbato_final", PES_VOLUMEN["silbato"]):
+		_play(sfx_whistle_long)
 
-func play_kick() -> void:
-	_play(sfx_kick)
+## velocidad: la de la pelota al salir (un penal va de unos 12 a 35 m/s).
+func play_kick(velocidad := 25.0) -> void:
+	if not _golpe_pes("patada", (velocidad - 12.0) / 20.0, PES_VOLUMEN["golpe"]):
+		_play(sfx_kick)
+
+## Un golpe de la pelota (SoccerBall.impacto): palo, travesano, red o pique.
+func play_impacto(tipo: String, fuerza: float) -> void:
+	if not _golpe_pes(tipo, fuerza, PES_VOLUMEN["pique" if tipo == "pique" else "golpe"]) and tipo in ["palo", "travesano"]:
+		_play(sfx_post)
 
 func play_goal() -> void:
-	_play(sfx_goal)
-	if sfx_crowd_chant:
-		_play(sfx_crowd_chant)
+	if _pes_sonar("gol_cuerpo", PES_VOLUMEN["gol"]):
+		_pes_sonar("gol_arranque", PES_VOLUMEN["gol"])
+	else:
+		_play(sfx_goal)
+		if sfx_crowd_chant:
+			_play(sfx_crowd_chant)
 	crowd_celebration_triggered.emit(5.0)
 
-func play_save() -> void:
-	_play(sfx_save)
-	if sfx_crowd_boo:
+## agarra: si la retiene (si no, la rechaza).
+func play_save(agarra := true) -> void:
+	if not _golpe_pes("agarra" if agarra else "rechazo", 0.8, PES_VOLUMEN["golpe"]):
+		_play(sfx_save)
+	if not _pes_sonar("atajada", PES_VOLUMEN["atajada"]) and sfx_crowd_boo:
 		_play(sfx_crowd_boo)
 
 func play_post() -> void:
 	_play(sfx_post)
-	if sfx_crowd_boo:
+	if not _pes_sonar("uh", PES_VOLUMEN["uh"]) and sfx_crowd_boo:
 		_play(sfx_crowd_boo)
 
 func play_miss() -> void:
-	_play(sfx_miss)
-	if sfx_crowd_boo:
-		_play(sfx_crowd_boo)
+	if _pes_sonar("uh", PES_VOLUMEN["uh"]):
+		if randf() < PROB_ABUCHEO:
+			_pes_sonar("abucheo", PES_VOLUMEN["abucheo"])
+	else:
+		_play(sfx_miss)
+		if sfx_crowd_boo:
+			_play(sfx_crowd_boo)
 
 func play_anticipation() -> void:
-	_play(sfx_crowd_anticipation)
+	if not _pes_sonar("expectativa", PES_VOLUMEN["expectativa"]):
+		_play(sfx_crowd_anticipation)
 
 func _play(player: AudioStreamPlayer) -> void:
 	if player and player.stream:

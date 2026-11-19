@@ -62,17 +62,30 @@ const FESTEJOS_PATEADOR := ["dm_goal_Knee_slide01", "dm_goal_Sliding01", "dm_goa
 	"dm_tu_run_3_0_idle_guts_banzai", "dm_tu_run_3_0_idle_guts_high", "dm_tu_run_3_0_idle_gutsR",
 	"dm_tu_idle_0_0_idle_guts_banzai", "dm_tu_idle_0_0_idle_guts_high", "dm_tu_idle_0_0_idle_gutsR",
 	"dm_pfm_cornerF_kick", "dm_pfm_cornerF_lariat"]
-const FESTEJOS_ARQUERO := ["dm_oop_gk_idle_0_0_idle_cheer_03"]
+const FESTEJOS_ARQUERO := ["dm_oop_gk_idle_0_0_idle_cheer_03", "dm_oop_gk_idle_0_0_idle_walkCheer", "dm_oop_gk_idle_0_0_idle_walkCheer_04"]
 ## Las escenas de dt12 (tools/pes_extraer_ceremonias.py) que usa cada uno. El arquero
 ## tambien puede ser el capitan, asi que necesita los clips principales.
 const ESCENAS_ARQUERO := ["dml_end_raise01_trophy08_cup_lg_chl", "dml_pk_win_hugSet_run_pounce02", "dml_pk_lose_aghast", "dml_pk_ready03_keeper_in", "dml_pk_goal_gk_goddamn_cool",
 	"dml_pk_ready01_firstkeeper", "dml_pk_ready02_firstkeeper", "dml_end_trophy01_cup_eur"]
-const ESCENAS_PATEADOR := ["dml_end_raise01_trophy08_", "dml_pk_win_hugSet_run_pounce02", "dml_pk_lose_aghast", "dml_pk_miss_shoot_", "dml_pk_goal_guts", "dml_pk_goal_drumming", "dml_pk_goal_pointing", "dml_pk_wait_miss_set01_", "dml_pk_ready03_kicker_in", "dml_pk_ready02_wait", "dml_pk_ready01_firstkicker", "dml_pk_ready02_firstkicker", "dml_pk_wait_success_set01_", "dml_pk_wait_success_pair", "dml_ent_circleJPN01_", "dml_end_trophy01_"]
+const ESCENAS_PATEADOR := ["dml_end_raise01_trophy08_", "dml_pk_win_hugSet_run_pounce02", "dml_pk_lose_aghast", "dml_pk_miss_shoot_", "dml_pk_goal_guts", "dml_pk_goal_drumming", "dml_pk_goal_pointing", "dml_pk_wait_miss_set01_", "dml_pk_ready03_kicker_in", "dml_pk_ready03_judge", "dml_pk_ready02_wait", "dml_pk_ready01_firstkicker", "dml_pk_ready02_firstkicker", "dml_pk_wait_success_set01_", "dml_pk_wait_success_pair", "dml_ent_circleJPN01_", "dml_end_trophy01_"]
 ## Festejos completos de un jugador (arrancan corriendo y terminan en el gesto) que sirven
 ## solos: no se van demasiado lejos, no duran demasiado y no se tiran al piso ni flotan.
 const FESTEJO_RECORRIDO := Vector2(3.0, 18.0)
 const FESTEJO_DURACION := Vector2(3.0, 9.0)
 const FESTEJO_ALTURA := Vector2(0.4, 1.7)
+## Festejos grupales (tools/pes_extraer_ceremonias.py): cuanto dura el del autor, entre que
+## alturas de cadera se aceptan (hay quien se sube a upa) y a cuanto de algun companero
+## tiene que llegar CADA uno, cadera con cadera (un abrazo o chocar los cinco): en PES
+## hay festejos en que alguno le hace el gesto a otro que esta a 2 m, y en el juego se ve
+## como abrazar al aire.
+const GRUPAL_DURACION := Vector2(4.0, 14.0)
+const GRUPAL_ALTURA := Vector2(0.25, 2.3)
+const GRUPAL_CONTACTO := 0.6
+## Y a cuanto del autor terminan los demas, en promedio, como mucho, y a cuanto del mas
+## cercano termina cada uno: si alguno queda aparte, abraza o le habla a alguien lejos.
+const GRUPAL_SEPARACION := 6.0
+const GRUPAL_VECINO := 2.0
+const GRUPAL_PASO := 0.25
 ## Las vaselinas (kick_*_lob) son suaves: el pie va mas lento que en un remate.
 const VELOCIDAD_MINIMA_REMATE := 12.0
 const VELOCIDAD_MINIMA_LOB := 7.0
@@ -94,6 +107,14 @@ var _hecho := false
 var _juego: Node
 ## Por clip (sin espejar): cuanto se subio la cadera en cada cuadro.
 var _levantes := {}
+var _crudas := {}
+
+## escenas.json tal cual, sin los ajustes del editor de festejos: el juego los aplica
+## encima de lo que se mide aca (si se midiera con ellos, se aplicarian dos veces).
+func _escenas_crudas() -> Dictionary:
+	if _crudas.is_empty():
+		_crudas = JSON.parse_string(FileAccess.get_file_as_string(DIR + "escenas.json"))
+	return _crudas
 
 func _initialize() -> void:
 	_juego = load("res://scenes/game.tscn").instantiate()
@@ -148,6 +169,12 @@ func _construir() -> void:
 	for n: String in FESTEJOS_PATEADOR:
 		_agregar(lib_p, DIR + "fbx/festejos/" + n + ".fbx", huesos, x_p, false, false)
 	var festejos_gol := []
+	# Los clips de festejos grupales esperan a sus companeros: no van solos.
+	var grupales: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(DIR + "festejos_grupales.json"))
+	var de_grupo := {}
+	for corte: String in grupales.values():
+		for a: Dictionary in _escenas_crudas()[corte]:
+			de_grupo[a["clip"]] = true
 	for f in _fbx("ceremonia"):
 		var nombre := f.get_file().get_basename()
 		if nombre.ends_with("_ball"):
@@ -155,7 +182,7 @@ func _construir() -> void:
 		var es_festejo := nombre.begins_with("dml_goal_celebrate")
 		if es_festejo or ESCENAS_PATEADOR.any(func(p: String): return nombre.begins_with(p)):
 			_agregar(lib_p, f, huesos, x_p, false, false)
-		if es_festejo:
+		if es_festejo and not de_grupo.has(nombre):
 			if _festejo_sirve(lib_p.get_animation(nombre)):
 				festejos_gol.append(nombre)
 			else:
@@ -190,6 +217,21 @@ func _construir() -> void:
 		"nube_malla": cuerpo_a.nubes(),
 		"festejos_gol": festejos_gol,
 	}
+	var medidos := _medir_grupales(pateador, ap_p, sk_p, grupales.values())
+	datos["festejos_grupales"] = medidos["sirven"]
+	datos["festejos_grupales_descartados"] = medidos["descartados"]
+	# De los festejos grupales quedan en pateador.res solo los clips de los que sirven. Los
+	# de los descartados van aparte (GRUPALES_EXTRA): el editor de festejos los muestra y
+	# el juego los carga solo si alguno se activo a mano.
+	var usados := {}
+	for g: Dictionary in datos["festejos_grupales"]:
+		for a: Dictionary in g["actores"]:
+			usados[a["clip"]] = true
+	var lib_extra := AnimationLibrary.new()
+	for n: String in de_grupo:
+		if not usados.has(n) and lib_p.has_animation(n):
+			lib_extra.add_animation(n, lib_p.get_animation(n))
+			lib_p.remove_animation(n)
 	# Las carreras y golpes sueltos ya estan adentro de los clips unidos.
 	for n: String in lib_p.get_animation_list():
 		if n.begins_with("kick_") or n.begins_with("pk_runup"):
@@ -197,12 +239,98 @@ func _construir() -> void:
 	# Se comprimen recien aca: para medir y unir se usan los cuadros exactos.
 	_comprimir_con_control(lib_a)
 	_comprimir_con_control(lib_p)
+	_comprimir_con_control(lib_extra)
 	ResourceSaver.save(lib_a, DIR + "arquero.res")
 	ResourceSaver.save(lib_p, DIR + "pateador.res")
+	ResourceSaver.save(lib_extra, DIR + PesAnimaciones.GRUPALES_EXTRA)
 	var f := FileAccess.open(DIR + "datos.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(datos, " "))
 	f.close()
 	print("listo en %.0f s" % ((Time.get_ticks_msec() - t0) / 1000.0))
+
+## Por cada festejo grupal, el camino de la cadera de cada actor (x, z cada GRUPAL_PASO s),
+## con la escena puesta en el origen como la pone el juego. Con eso el juego mueve al grupo
+## entero, sin separarlo, hasta el corner. El autor va primero. Devuelve los que sirven y,
+## aparte, los que no pasan los controles con el motivo, para arreglarlos en el editor de
+## festejos. Solo se pierden los que no tienen todos sus clips.
+func _medir_grupales(pateador: Node3D, ap: AnimationPlayer, sk: Skeleton3D, cortes: Array) -> Dictionary:
+	var salida := []
+	var descartados := []
+	var cuenta := {"faltan": 0, "duracion": 0, "altura": 0, "solos": 0, "separados": 0}
+	for corte: String in cortes:
+		var actores: Array = _escenas_crudas()[corte].duplicate(true)
+		actores.sort_custom(func(a, b): return not str(a["clip"]).contains("_sub") and str(b["clip"]).contains("_sub"))
+		if actores.any(func(a): return not ap.has_animation("pes/" + str(a["clip"]))):
+			cuenta["faltan"] += 1
+			continue
+		var largo := ap.get_animation("pes/" + str(actores[0]["clip"])).length
+		var medido := _caminos(pateador, ap, sk, actores, largo)
+		var caminos: Array = medido["caminos"]
+		# Cada uno tiene que llegar a tocar a alguno en algun momento.
+		var lejos := 0.0
+		for i in caminos.size():
+			var encuentro := INF
+			for j in caminos.size():
+				if j == i:
+					continue
+				for k in mini(caminos[i].size(), caminos[j].size()):
+					encuentro = minf(encuentro, Vector2(caminos[i][k][0] - caminos[j][k][0], caminos[i][k][1] - caminos[j][k][1]).length())
+			lejos = maxf(lejos, encuentro)
+		var motivo := ""
+		var detalle := ""
+		if largo < GRUPAL_DURACION.x or largo > GRUPAL_DURACION.y:
+			motivo = "duracion"
+			detalle = "dura %.1f s" % largo
+		elif not medido["alturas_ok"]:
+			motivo = "altura"
+			detalle = "alguno se tira al piso o se sube a otro"
+		elif lejos > GRUPAL_CONTACTO:
+			motivo = "solos"
+			detalle = "alguno no llega a tocar a nadie (queda a %.1f m)" % lejos
+		elif medido["separacion"] > GRUPAL_SEPARACION or medido["aparte"] > GRUPAL_VECINO:
+			motivo = "separados"
+			detalle = "alguno termina lejos (a %.1f m del mas cercano)" % medido["aparte"]
+		var g := {"corte": corte, "largo": largo, "actores": actores, "caminos": caminos}
+		if motivo == "":
+			salida.append(g)
+		else:
+			cuenta[motivo] += 1
+			g["motivo"] = detalle
+			descartados.append(g)
+	ap.stop()
+	pateador.global_transform = Transform3D.IDENTITY
+	print("festejos grupales: %d (descartados %s)" % [salida.size(), cuenta])
+	return {"sirven": salida, "descartados": descartados}
+
+## El camino de la cadera de cada actor, si alguno se tira al piso o vuela y que tan
+## lejos del autor terminan los demas, en promedio.
+func _caminos(pateador: Node3D, ap: AnimationPlayer, sk: Skeleton3D, actores: Array, largo: float) -> Dictionary:
+	var caminos := []
+	var alturas_ok := true
+	for a: Dictionary in actores:
+		var camino := []
+		var t := 0.0
+		var hasta := minf(largo, ap.get_animation("pes/" + str(a["clip"])).length)
+		PesAnimaciones.colocar_actor(pateador, ap, a, Vector3.ZERO, PesAnimaciones.ESCALA_CON_CARRERA)
+		while t <= hasta + 0.001:
+			ap.seek(minf(t, hasta - 0.02), true)
+			sk.force_update_all_bone_transforms()
+			var p := _pos(sk, CADERA)
+			alturas_ok = alturas_ok and p.y >= GRUPAL_ALTURA.x and p.y <= GRUPAL_ALTURA.y
+			camino.append([snappedf(p.x, 0.01), snappedf(p.z, 0.01)])
+			t += GRUPAL_PASO
+		caminos.append(camino)
+	var separacion := 0.0
+	for i in range(1, caminos.size()):
+		separacion += Vector2(caminos[i][-1][0] - caminos[0][-1][0], caminos[i][-1][1] - caminos[0][-1][1]).length()
+	var aparte := 0.0
+	for i in caminos.size():
+		var vecino := INF
+		for j in caminos.size():
+			if j != i:
+				vecino = minf(vecino, Vector2(caminos[i][-1][0] - caminos[j][-1][0], caminos[i][-1][1] - caminos[j][-1][1]).length())
+		aparte = maxf(aparte, vecino)
+	return {"caminos": caminos, "alturas_ok": alturas_ok, "separacion": separacion / maxf(caminos.size() - 1, 1), "aparte": aparte}
 
 ## Sube la cadera en los cuadros donde la malla atravesaria el piso. Va antes de
 ## medir contactos y empalmes, que dependen de la altura final. El clip espejado

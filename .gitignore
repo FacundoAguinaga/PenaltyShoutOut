@@ -19,3 +19,6 @@ assets/models/stadium_optimizado.scn
 
 # Animaciones extraidas de PES 2021: solo para uso local.
 animaciones_pes/
+
+# Descargas originales de las ciudades: el juego usa lo descomprimido.
+assets/cities/*.zip

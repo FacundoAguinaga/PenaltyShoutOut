@@ -1,0 +1,40 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://bhtbu7bshts5s"]
+
+[ext_resource type="Shader" uid="uid://dx6biuduhk2ex" path="res://assets/materials/grass_shells.gdshader" id="1_shells"]
+
+[resource]
+resource_name = "GrassShellsMaterial"
+render_priority = 0
+shader = ExtResource("1_shells")
+shader_parameter/grass_base = Color(0.25, 0.42, 0.14, 1)
+shader_parameter/grass_dark = Color(0.11, 0.25, 0.06, 1)
+shader_parameter/grass_tip = Color(0.41, 0.55, 0.22, 1)
+shader_parameter/wear_color = Color(0.47, 0.44, 0.27, 1)
+shader_parameter/stripe_width = 5.5
+shader_parameter/stripe_view = 0.24
+shader_parameter/stripe_fixed = 0.07
+shader_parameter/stripe_softness = 0.18
+shader_parameter/goal_line_z = -11.0
+shader_parameter/pitch_length = 105.0
+shader_parameter/macro_strength = 0.1
+shader_parameter/detail_strength = 0.12
+shader_parameter/wear_strength = 0.55
+shader_parameter/wind_strength = 0.5
+shader_parameter/wind_speed = 1.4
+shader_parameter/grass_height = 0.05
+shader_parameter/shell_density = 70.0
+shader_parameter/blade_width = 0.3
+shader_parameter/lean_amount = 0.55
+shader_parameter/shell_radius = 20.0
+shader_parameter/blade_tint = 0.22
+shader_parameter/debug_shells = 0
+shader_parameter/shell_fade_dist = 35.0
+shader_parameter/line_rect = Vector4(0, 0, 1, 1)
+shader_parameter/use_line_mask = 0.0
+shader_parameter/line_color = Color(0.86, 0.88, 0.86, 1)
+shader_parameter/field_rect = Vector4(0, 0, 1, 1)
+shader_parameter/use_field = 0.0
+shader_parameter/pitch_rect = Vector4(-40, -15, 40, 98)
+shader_parameter/layer_px = 1.6
+shader_parameter/min_layers = 3.0
+shader_parameter/tile_half_diag = 1.77

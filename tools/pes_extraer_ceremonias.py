@@ -40,6 +40,25 @@ ELEGIDOS = re.compile(
 )
 # Festejos de gol de un solo jugador, sin companeros ni objetos: se pueden usar sueltos.
 FESTEJO = re.compile(r"^dml_goal_celebrate_(\d+)(\w*)$")
+# Festejos grupales: el autor (dml_goal_celebrate_N) y sus companeros (_subK), cada uno
+# con su clip coordinado con los demas. Sin carteles, camaras ni tribuna.
+GRUPAL = re.compile(r"^dml_goal_celebrate_(\d+(?:_[A-Z])?)(_sub\d+)?$")
+SIN_OBJETOS = re.compile(r"Board|camera|audi|Banner|bench|Bench", re.I)
+
+
+def festejos_grupales(escenas: dict) -> dict:
+    """Por cada festejo grupal, el corte que lo trae completo (autor y la mayor cantidad de companeros)."""
+    mejor = {}
+    for corte, actores in escenas.items():
+        ms = [GRUPAL.match(a["clip"]) for a in actores]
+        if len(actores) < 2 or not all(ms) or len({m.group(1) for m in ms}) != 1 or SIN_OBJETOS.search(corte):
+            continue
+        if all(m.group(2) for m in ms):
+            continue
+        base = ms[0].group(1)
+        if base not in mejor or len(actores) > len(escenas[mejor[base]]):
+            mejor[base] = corte
+    return mejor
 
 
 def main() -> None:
@@ -60,7 +79,10 @@ def main() -> None:
         huesos = [b["name"] for b in esqueleto]
         SALIDA.mkdir(parents=True, exist_ok=True)
         escenas = json.loads((SALIDA.parent / "escenas.json").read_text())
-        de_escenas = {a["clip"] for e in ESCENAS_USADAS for a in escenas[e] if a["clip"].startswith("dml_") and not a["clip"].endswith("_hi")}
+        grupo = festejos_grupales(escenas)
+        (SALIDA.parent / "festejos_grupales.json").write_text(json.dumps(grupo, indent=1, sort_keys=True))
+        usadas = ESCENAS_USADAS + list(grupo.values())
+        de_escenas = {a["clip"] for e in usadas for a in escenas[e] if a["clip"].startswith("dml_") and not a["clip"].endswith("_hi")}
         hechos = 0
         grupales = set()
         for fila in toc:

@@ -1,0 +1,110 @@
+{
+	"goal_A_flag_dance01": {
+		"actores": {
+			"dml_goal_celebrate_0265_sub1#0": {
+				"x": -1.76,
+				"z": -0.61
+			},
+			"dml_goal_celebrate_0265_sub2#0": {
+				"x": -2.17,
+				"z": -0.9
+			},
+			"dml_goal_celebrate_0265_sub3#0": {
+				"x": -1.96,
+				"z": -0.95
+			}
+		}
+	},
+	"goal_celebrate_0032_cut2": {
+		"actores": {
+			"dml_goal_celebrate_0168#0": {
+				"x": -1.88,
+				"z": -0.28
+			},
+			"dml_goal_celebrate_0168_sub1#0": {
+				"x": -0.96,
+				"z": 0.01
+			},
+			"dml_goal_celebrate_0168_sub2#0": {
+				"x": -1.2,
+				"z": -0.93
+			}
+		}
+	},
+	"goal_celebrate_0152_base": {
+		"actores": {
+			"dml_goal_celebrate_0152_sub1#0": {
+				"x": -0.82,
+				"z": 0.5
+			},
+			"dml_goal_celebrate_0152_sub2#0": {
+				"x": -0.44,
+				"z": 0.49
+			},
+			"dml_goal_celebrate_0152_sub3#0": {
+				"x": 0.86,
+				"z": -0.25
+			},
+			"dml_goal_celebrate_0152_sub4#0": {
+				"x": 2.01,
+				"z": 0.79
+			}
+		}
+	},
+	"goal_celebrate_0160_base": {
+		"actores": {
+			"dml_goal_celebrate_0160_sub1#0": {
+				"x": -2.25,
+				"z": 1.22
+			},
+			"dml_goal_celebrate_0160_sub2#0": {
+				"x": -0.6,
+				"z": 0.19
+			},
+			"dml_goal_celebrate_0160_sub4#0": {
+				"x": -0.54,
+				"z": 0.17
+			}
+		}
+	},
+	"goal_celebrate_0166": {
+		"actores": {
+			"dml_goal_celebrate_0166_sub1#0": {
+				"x": 0.13,
+				"z": -0.5
+			},
+			"dml_goal_celebrate_0166_sub2#0": {
+				"x": 0.99,
+				"z": -0.4
+			},
+			"dml_goal_celebrate_0166_sub3#0": {
+				"x": 1.03,
+				"z": 1.51
+			},
+			"dml_goal_celebrate_0166_sub4#0": {
+				"x": 1.86,
+				"z": 0.69
+			}
+		}
+	},
+	"goal_celebrate_0167": {
+		"actores": {
+			"dml_goal_celebrate_0167_sub1#0": {
+				"x": 0.64,
+				"z": 0.43
+			},
+			"dml_goal_celebrate_0167_sub2#0": {
+				"x": 0.5,
+				"z": -1.13
+			}
+		}
+	},
+	"goal_celebrate_0301": {
+		"actores": {
+			"dml_goal_celebrate_0301_sub1#0": {
+				"x": 0.42,
+				"z": -0.44
+			}
+		}
+	}
+}

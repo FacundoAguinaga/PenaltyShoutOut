@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="HinchadaBanco" format=3 uid="uid://bsuaje12rux52"]
+
+[ext_resource type="Texture2D" path="res://resources/hinchada/imp_albedo.res" id="1_30r8s"]
+[ext_resource type="Texture2D" path="res://resources/hinchada/imp_coords.res" id="2_tr36u"]
+[ext_resource type="Texture2D" path="res://resources/hinchada/imp_mascara.res" id="3_g88bg"]
+[ext_resource type="Script" uid="uid://iyxqe37exvf2" path="res://scripts/hinchada_npc.gd" id="4_2vb61"]
+[ext_resource type="Texture2D" path="res://resources/hinchada/ch42_albedo.res" id="5_bwb5h"]
+[ext_resource type="ArrayMesh" path="res://resources/hinchada/ch42_cerca.res" id="7_73ta8"]
+[ext_resource type="ArrayMesh" path="res://resources/hinchada/ch42_media.res" id="8_vi28d"]
+[ext_resource type="Texture2D" path="res://resources/hinchada/ch42_vat_normales.res" id="9_30r8s"]
+[ext_resource type="Texture2D" path="res://resources/hinchada/ch42_vat.res" id="9_ncc2a"]
+[ext_resource type="Script" uid="uid://dwd5f72abmfl1" path="res://scripts/hinchada_banco.gd" id="10_wfuop"]
+
+[sub_resource type="Resource" id="Resource_tr36u"]
+script = ExtResource("4_2vb61")
+nombre = "ch42"
+malla_cerca = ExtResource("7_73ta8")
+malla_media = ExtResource("8_vi28d")
+vat = ExtResource("9_ncc2a")
+vat_normales = ExtResource("9_30r8s")
+albedo = ExtResource("5_bwb5h")
+lum_media = Vector4(0.13302822, 0.23394775, 0.3, 0.15911306)
+
+[resource]
+script = ExtResource("10_wfuop")
+anim_nombres = PackedStringArray("idle", "aplauso", "festejo", "victoria", "enojo", "triste", "sentado", "sentado_aplauso", "charla_izq", "charla_der", "sentado_festejo")
+anim_inicio = PackedInt32Array(0, 60, 78, 122, 190, 258, 300, 360, 410, 485, 560)
+anim_cuadros = PackedInt32Array(60, 18, 44, 68, 68, 42, 60, 50, 75, 75, 75)
+npcs = Array[ExtResource("4_2vb61")]([SubResource("Resource_tr36u")])
+imp_albedo = ExtResource("1_30r8s")
+imp_mascara = ExtResource("3_g88bg")
+imp_coords = ExtResource("2_tr36u")

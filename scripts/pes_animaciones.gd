@@ -8,14 +8,22 @@ extends RefCounted
 const DIR := "res://animaciones_pes/"
 const LIBRERIA := "pes"
 const LIBRERIA_FOTO := "pes_foto"
+## Los clips de los festejos grupales que la build descarta (tools/pes_construir.gd). Se
+## cargan solo si el editor de festejos activo alguno, o en el editor.
+const GRUPALES_EXTRA := "grupales_extra.res"
 const CADERA := "mixamorig1Hips"
 const PesPiso := preload("res://scripts/pes_piso.gd")
 
 static var _datos: Dictionary = {}
 static var _escenas: Dictionary = {}
 ## Las escenas de PES vienen con las medidas de sus jugadores; los nuestros son mas chicos
-## (la cadera queda al 91 %), asi que las distancias entre ellos se achican igual.
+## (la cadera queda al 91 %), asi que en las escenas quietas (la ronda, las filas) las
+## distancias entre ellos se achican igual y las manos llegan a los hombros.
 const ESCALA_ESCENAS := 0.91
+## Pero el retarget achica solo la altura de la cadera, no lo que se desplaza: un clip que
+## en PES corre 23,7 m aca corre 23,7 m. En las escenas en que corren, los lugares van sin
+## achicar; si no, dos que arrancan a 15 m se encuentran 1,4 m corridos.
+const ESCALA_CON_CARRERA := 1.0
 
 static func disponible() -> bool:
 	return ResourceLoader.exists(DIR + "arquero.res") and ResourceLoader.exists(DIR + "pateador.res") \
@@ -24,40 +32,97 @@ static func disponible() -> bool:
 static func datos() -> Dictionary:
 	if _datos.is_empty():
 		_datos = JSON.parse_string(FileAccess.get_file_as_string(DIR + "datos.json"))
+		# Los retoques a mano del editor de festejos (FestejosAjustes).
+		# Los descartados por la build entran si se activaron a mano.
+		var grupales: Array = _datos.get("festejos_grupales", [])
+		for g: Dictionary in _datos.get("festejos_grupales_descartados", []):
+			if FestejosAjustes.activado(str(g["corte"])):
+				grupales.append(g)
+		_datos["festejos_grupales"] = FestejosAjustes.aplicar_a_grupales(grupales)
+		_datos["festejos_gol"] = (_datos.get("festejos_gol", []) as Array).filter(func(n: String): return not FestejosAjustes.desactivado(n))
 	return _datos
+
+## Vuelve a leer todo (despues de guardar ajustes en el editor de festejos).
+static func recargar() -> void:
+	_datos = {}
+	_escenas = {}
+	FestejosAjustes._cargado = false
 
 ## Escenas de PES (tools/pes_extraer_escenas.py): por corte, el clip, el lugar y el giro
 ## de cada actor.
 static func escenas() -> Dictionary:
 	if _escenas.is_empty() and FileAccess.file_exists(DIR + "escenas.json"):
 		_escenas = JSON.parse_string(FileAccess.get_file_as_string(DIR + "escenas.json"))
+		FestejosAjustes.aplicar_a_escenas(_escenas)
 	return _escenas
 
-## Pone a un actor de una escena de PES. En PES x va a lo largo de la cancha (hacia el
-## arco es -x) y z a lo ancho; aca el arco esta hacia -z. La conversion se eligio
-## midiendo hacia donde apuntan los pies: con esta, en la ronda de 11 todos miran al
-## centro, las filas miran al arco y cada mano cae sobre el hombro del vecino.
-## `origen` es donde queda el (0, 0, 0) de la escena. Devuelve el segundo del clip en
-## el que arranca.
-static func colocar_actor(raiz: Node3D, ap: AnimationPlayer, actor: Dictionary, origen: Vector3) -> float:
-	var p: Array = actor["pos"]
-	var lugar := Vector3(float(p[2]) * ESCALA_ESCENAS, float(p[1]), float(p[0]) * ESCALA_ESCENAS)
-	# Un giro de exactamente 0 en PES es "sin giro" y equivale a media vuelta: con eso, en el
-	# abrazo final los cinco que llegan corriendo terminan juntos (con 0 corren en paralelo).
-	var giro := float(actor["giro"]) if float(actor["giro"]) != 0.0 else 180.0
-	raiz.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(-giro - 90.0)), origen + lugar)
-	var anim := "pes/" + str(actor["clip"])
-	var largo := ap.get_animation(anim).length
-	# El dato que acompana a cada actor es en que momento arranca, en sesentavos de segundo.
-	var desde := fmod(float(actor["extra"]) / 60.0, largo) if float(actor["extra"]) < 1.0e6 else 0.0
-	ap.speed_scale = 1.0
-	ap.play(anim, 0.0)
-	ap.seek(desde, true)
-	return desde
+## Un lugar de una escena de PES, aca. En PES x va a lo largo de la cancha (hacia el arco
+## es -x) y z a lo ancho; aca el arco esta hacia -z. Tiene que ser una rotacion y no un
+## espejo: los clips no se espejan, y con x y z solo intercambiados (como estuvo antes)
+## cada uno quedaba del otro lado de su companero y el que abrazaba lo hacia al aire.
+static func lugar_pes(x: float, y: float, z: float, escala := ESCALA_ESCENAS) -> Vector3:
+	return Vector3(-z * escala, y, x * escala)
 
-static func cargar_libreria(ap: AnimationPlayer, archivo: String) -> void:
-	if not ap.has_animation_library(LIBRERIA):
-		ap.add_animation_library(LIBRERIA, load(DIR + archivo))
+## Pone a un actor de una escena de PES. La conversion se eligio midiendo con los datos de
+## PES solos: el camino de cada clip girado `giro` y puesto en su lugar. Asi, en los 131
+## festejos grupales el 88 % de los jugadores llega a tocar a alguien (mediana 0,25 m); con
+## cualquier otra lectura del giro, a lo sumo el 67 %. El giro 0 es 0: en el abrazo final
+## (todos en 0) terminan juntos.
+## `origen` es donde queda el (0, 0, 0) de la escena. Arranca el clip en `desde`: los clips
+## de una escena estan sincronizados en su propio tiempo (en la ronda de 11 todos se
+## separan entre los 9 y los 11 s del clip), asi que todos van desde el mismo segundo.
+## `escala` achica las distancias; para lugares de la cancha (el arbitro, el arco) va 1.
+## Si el actor trae un ajuste del editor de festejos (FestejosAjustes), se lo corre, se lo
+## gira y se adelanta o atrasa su clip.
+static func colocar_actor(raiz: Node3D, ap: AnimationPlayer, actor: Dictionary, origen: Vector3, escala := ESCALA_ESCENAS, desde := 0.0) -> void:
+	raiz.global_transform = lugar_actor(actor, origen, escala)
+	ap.speed_scale = 1.0
+	ap.play("pes/" + str(actor["clip"]), 0.0)
+	seek_actor(ap, actor, desde)
+
+## Donde va la raiz de un actor de una escena, con su ajuste.
+static func lugar_actor(actor: Dictionary, origen: Vector3, escala := ESCALA_ESCENAS) -> Transform3D:
+	var p: Array = actor["pos"]
+	var aj: Dictionary = actor.get("ajuste", {})
+	var lugar := lugar_pes(float(p[0]), float(p[1]), float(p[2]), escala)
+	lugar += Vector3(float(aj.get("x", 0.0)), 0.0, float(aj.get("z", 0.0)))
+	var giro := float(actor["giro"]) + 90.0 + float(aj.get("giro", 0.0))
+	return Transform3D(Basis(Vector3.UP, deg_to_rad(giro)), origen + lugar)
+
+## Lleva el clip de un actor al segundo `t` de la escena, con su desfase. Con desfase
+## negativo, al principio espera quieto en el primer cuadro.
+static func seek_actor(ap: AnimationPlayer, actor: Dictionary, t: float) -> void:
+	var en_clip := t + float((actor.get("ajuste", {}) as Dictionary).get("desfase", 0.0))
+	ap.seek(maxf(en_clip, 0.0), true)
+	if en_clip < -0.01 and ap.is_inside_tree():
+		ap.speed_scale = 0.0
+		var clip := ap.current_animation
+		ap.get_tree().create_timer(-en_clip, false).timeout.connect(func():
+			if is_instance_valid(ap) and ap.current_animation == clip:
+				ap.speed_scale = 1.0)
+
+## `con_descartados` suma siempre los clips de GRUPALES_EXTRA (para el editor); si no, se
+## suman solo cuando hay algun festejo descartado activado.
+static func cargar_libreria(ap: AnimationPlayer, archivo: String, con_descartados := false) -> void:
+	if ap.has_animation_library(LIBRERIA):
+		return
+	var lib: AnimationLibrary = load(DIR + archivo)
+	if archivo == "pateador.res" and (con_descartados or _hay_descartados_activados()):
+		sumar_descartados(lib)
+	ap.add_animation_library(LIBRERIA, lib)
+
+static func _hay_descartados_activados() -> bool:
+	return (datos().get("festejos_grupales_descartados", []) as Array).any(
+		func(g: Dictionary): return FestejosAjustes.activado(str(g["corte"])))
+
+## Agrega a la libreria (la misma para todos los personajes) los clips de GRUPALES_EXTRA.
+static func sumar_descartados(lib: AnimationLibrary) -> void:
+	if not ResourceLoader.exists(DIR + GRUPALES_EXTRA):
+		return
+	var extra: AnimationLibrary = load(DIR + GRUPALES_EXTRA)
+	for n: StringName in extra.get_animation_list():
+		if not lib.has_animation(n):
+			lib.add_animation(n, extra.get_animation(n))
 
 ## Agrega al personaje el control que mantiene su malla sobre el piso.
 static func cuidar_piso(personaje: Node3D, sk: Skeleton3D) -> Node:

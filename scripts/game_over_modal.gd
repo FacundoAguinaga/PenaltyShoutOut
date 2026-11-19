@@ -37,12 +37,12 @@ func _ready():
 	_marcador = HBoxContainer.new()
 	_marcador.add_theme_constant_override("separation", 34)
 	v.add_child(_marcador)
-	_goles_tirador = _columna("TIRADOR")
+	_goles_tirador = _columna("TU EQUIPO")
 	var sep := ColorRect.new()
 	sep.color = Color(1, 1, 1, 0.18)
 	sep.custom_minimum_size = Vector2(1, 0)
 	_marcador.add_child(sep)
-	_goles_arquero = _columna("ARQUERO")
+	_goles_arquero = _columna("RIVAL")
 
 	var lista := VBoxContainer.new()
 	lista.add_theme_constant_override("separation", 2)
@@ -74,10 +74,10 @@ func setup_results(kicker_score: int, gk_score: int, _total_shots: int):
 
 	var texto: Label = _titulo.get_node("Texto")
 	if kicker_score > gk_score:
-		texto.text = "GANASTE"
+		texto.text = "GANASTE LA TANDA"
 		_goles_tirador.add_theme_color_override("font_color", EstiloUI.COLOR_ACENTO)
 	elif gk_score > kicker_score:
-		texto.text = "GANÓ EL ARQUERO"
+		texto.text = "GANÓ EL RIVAL"
 		_goles_arquero.add_theme_color_override("font_color", EstiloUI.COLOR_ACENTO)
 	else:
 		texto.text = "EMPATE"

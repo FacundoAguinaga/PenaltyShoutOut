@@ -1,6 +1,42 @@
 Espacio físico del juego/app:
 <img width="1024" height="571" alt="image" src="https://github.com/user-attachments/assets/a9c4f33b-ff53-43a7-9c04-4cf77d2274fb" />
 
+## Tanda de penales
+
+El partido se juega como una tanda real: cinco tiros por lado, alternados, y
+muerte súbita si siguen empatados. En los turnos de tu equipo pateás; en los del
+rival atajás.
+
+| Turno | Quién controla | Controles |
+|---|---|---|
+| Pateás | El delantero de turno | WASD para apuntar; ESPACIO mantenido y soltado para patear; SHIFT al soltar para picarla |
+| Atajás | El arquero | Flechas/D-pad para moverse por la línea; ESPACIO (o A) + flecha para tirarse; ↑/↓ eligen la altura |
+
+Cuando atajás no se muestra la mira del pateador rival: la mira del arco pasa a
+marcar la zona a la que te vas a tirar. Si elegís el lado correcto la
+probabilidad de taparla es alta (y más alta todavía si además acertás la altura
+y estás bien posicionado). El marcador de arriba a la izquierda muestra los
+círculos de la tanda: verde gol, rojo errado, aro el tiro que falta.
+
+Cada tiro lo patea un compañero distinto de la fila (los cinco tienen kit y
+piel/pelo propios) y el HUD indica quién sale y quién sigue.
+
+## Ciudad e iluminación
+
+La intro arranca con una vista general de la ciudad y el estadio de noche. La
+ciudad es un modelo diurno, así que al cargar la escena se le duplica el
+material de cada fachada y se le agrega emisión a la textura: las ventanas y
+calles se leen como una ciudad iluminada sin sumar cientos de luces.
+Ese trabajo lo hace `scripts/ciudad_noche.gd`.
+
+La ciudad solo se muestra durante esa toma de la intro. Al pasar al siguiente
+plano (o al gameplay) se oculta, porque desde la cámara del partido no se ve.
+El ambiente nocturno está en `resources/stadium_environment_noche.tres`: cielo
+azul profundo en lugar del fondo negro, niebla baja y un brillo suave para que
+la ciudad no quede flotando en la nada.
+
+
+
 ## Animaciones de PES 2021
 
 El pateador, el arquero y las cinemáticas usan animaciones extraídas de PES 2021,

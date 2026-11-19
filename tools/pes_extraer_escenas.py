@@ -38,7 +38,8 @@ def leer_corte(datos: bytes) -> list:
             continue
         s = m.start()
         x, y, z, giro = struct.unpack_from("<4f", bloque, s - 16)
-        # Un dato por actor que todavia no se sabe que es (548 en los que arrancan despues).
+        # Un dato por actor que todavia no se sabe que es. No es el arranque del clip: los
+        # clips de una escena van todos desde el mismo segundo.
         extra = struct.unpack_from("<f", bloque, s - 0x6c)[0]
         actores.append({"clip": m.group(1).decode(), "pos": [round(x, 4), round(y, 4), round(z, 4)], "giro": round(giro, 3), "extra": round(extra, 3)})
     return actores

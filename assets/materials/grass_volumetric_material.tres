@@ -1,0 +1,33 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://dkdyvpo4bolon"]
+
+[ext_resource type="Shader" uid="uid://3h1b0r6june2" path="res://assets/materials/grass_volumetric.gdshader" id="1_grass_shader"]
+
+[resource]
+resource_name = "GrassVolumetricMaterial"
+render_priority = 0
+shader = ExtResource("1_grass_shader")
+shader_parameter/grass_base = Color(0.25, 0.42, 0.14, 1)
+shader_parameter/grass_dark = Color(0.11, 0.25, 0.06, 1)
+shader_parameter/grass_tip = Color(0.41, 0.55, 0.22, 1)
+shader_parameter/wear_color = Color(0.47, 0.44, 0.27, 1)
+shader_parameter/stripe_width = 5.5
+shader_parameter/stripe_view = 0.24
+shader_parameter/stripe_fixed = 0.07
+shader_parameter/stripe_softness = 0.18
+shader_parameter/goal_line_z = -11.0
+shader_parameter/pitch_length = 105.0
+shader_parameter/macro_strength = 0.1
+shader_parameter/detail_strength = 0.12
+shader_parameter/wear_strength = 0.55
+shader_parameter/wind_strength = 0.5
+shader_parameter/wind_speed = 1.4
+shader_parameter/grass_height = 0.05
+shader_parameter/blade_density = 50.0
+shader_parameter/clump_scale = 5.0
+shader_parameter/height_strength = 0.8
+shader_parameter/normal_strength = 1.0
+shader_parameter/ao_strength = 0.3
+shader_parameter/lean_normal = 0.22
+shader_parameter/fade_start = 25.0
+shader_parameter/fade_end = 60.0
+shader_parameter/debug_mode = 0

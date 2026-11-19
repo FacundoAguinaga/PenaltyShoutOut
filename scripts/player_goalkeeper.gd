@@ -1,7 +1,7 @@
 extends Node3D
 class_name PlayerGoalkeeper
 
-enum GKState { IDLE, ANTICIPATING, DIVING, RESULT, RECOVERING, RESET }
+enum GKState { IDLE, ANTICIPATING, DIVING, RESULT, RECOVERING, RESET, CONTROL }
 
 @export var stats: GoalkeeperStats
 @export var animation_player: AnimationPlayer
@@ -28,6 +28,29 @@ enum GKState { IDLE, ANTICIPATING, DIVING, RESULT, RECOVERING, RESET }
 
 signal keeper_save(ball: SoccerBall)
 signal keeper_deflect(ball: SoccerBall)
+
+## Control humano (cuando el rival patea): el jugador mueve al arquero por la
+## linea con gk_move_* y elige el lado/altura de la estirada con gk_dive.
+## La tirada se guarda al soltar el boton y recien arranca cuando sale el tiro,
+## asi el jugador tiene que leer al pateador y no puede ver la mira rival.
+var control_humano: bool = false
+var _x_humano: float = 0.0
+var _ultima_dir_humana: float = 0.0
+## (lateral, altura): lateral -1/0/1; altura 1 arriba, 0 media, -1 abajo.
+var _pedido_humano: Vector2i = Vector2i(999, 999)
+var _tirada_elegida: bool = false
+var _tiro_humano: ShotData = null
+var _tiro_lanzado: bool = false
+var _ventana_reaccion: float = 0.0
+var _humano_dive_hecho: bool = false
+var _base_humana: Vector3 = Vector3.ZERO
+const VELOCIDAD_LATERAL_HUMANA := 3.4
+const LIMITE_LATERAL_HUMANO := 3.25
+const VENTANA_REACCION_HUMANA := 0.4
+const PUNTO_LATERAL := 2.35
+const PUNTO_ALTO := 1.95
+const PUNTO_MEDIO := 1.2
+const PUNTO_BAJO := 0.4
 
 var state: GKState = GKState.IDLE
 var reposition_module: RepositionModule
@@ -61,6 +84,11 @@ var _esperas: Array = []
 var _base_basis: Basis
 var _empalme_hecho: bool = false
 var _cola_reaccion: Array = []
+var _preparacion := 0
+## La preparacion o amague que esta haciendo, y cuando y como arranca la estirada.
+var _prep_anim := ""
+var _dive_ms := 0
+var _plan_actual := {}
 ## Si en este tiro el arquero ya se tiro antes de la patada (picada).
 var _ya_jugado: bool = false
 
@@ -74,6 +102,7 @@ var _ya_jugado: bool = false
 
 func _ready():
 	_base_position = global_position
+	_base_humana = _base_position
 	_base_basis = global_basis
 	
 	if not animation_player:
@@ -120,7 +149,9 @@ func _cargar_pes() -> void:
 	animation_player.animation_finished.connect(_al_terminar_animacion)
 
 func _al_terminar_animacion(_nombre: StringName) -> void:
-	if state == GKState.IDLE or state == GKState.ANTICIPATING:
+	if state == GKState.ANTICIPATING and _prep_anim != "" and String(_nombre) == _prep_anim and _current_anim:
+		_salir_del_amague()
+	elif state == GKState.IDLE or state == GKState.ANTICIPATING or state == GKState.CONTROL:
 		_jugar_espera()
 	elif state == GKState.RECOVERING:
 		_seguir_tras_reaccion()
@@ -146,6 +177,9 @@ func _seguir_tras_reaccion() -> void:
 	PesAnimaciones.empalmar(self, animation_player, skeleton, "pes/" + str(sig["anim"]), sig["t_inicio"], FUNDIDO_TRAS_REACCION)
 
 func _process(delta: float) -> void:
+	if control_humano and state == GKState.CONTROL:
+		_procesar_control_humano(delta)
+		return
 	if state == GKState.DIVING:
 		reposition_module.process_frame(delta)
 		if animation_player.current_animation_position >= _current_anim.contact_time:
@@ -169,17 +203,215 @@ func _seguir_reaccion() -> void:
 	_cola_reaccion = []
 	if _resultado == ResultModule.Resultado.ATAJA:
 		var lado := SUFIJO_ESPEJO if _current_anim.anim_name.ends_with(SUFIJO_ESPEJO) else ""
-		_cola_reaccion.append({"anim": TRAS_ATAJAR + lado, "t_inicio": 0.0})
+		_cola_reaccion.append({"anim": str(TRAS_ATAJAR.pick_random()) + lado, "t_inicio": 0.0})
 	elif _resultado == ResultModule.Resultado.GOL and not sig["cola"].is_empty():
 		_cola_reaccion.append(sig["cola"])
 	elif _resultado == ResultModule.Resultado.REBOTE:
-		_cola_reaccion.append({"anim": FESTEJO_REBOTE, "t_inicio": 0.0})
+		_cola_reaccion.append({"anim": FESTEJOS_REBOTE.pick_random(), "t_inicio": 0.0})
 	reposition_module._stop_ik()
 	PesAnimaciones.empalmar(self, animation_player, skeleton, "pes/" + str(sig["anim"]), sig["t_inicio"], 0.3)
 
+
+# ------------------------------------------------------- control humano (tanda)
+
+## El rival va a patear: el jugador maneja al arquero. Se puede mover por la
+## linea y elegir lado/altura; la estirada arranca recien cuando sale el tiro,
+## asi la mira del pateador no le sirve de pista.
+func iniciar_control_humano() -> void:
+	reset_to_idle()
+	control_humano = true
+	state = GKState.CONTROL
+	_x_humano = 0.0
+	_ultima_dir_humana = 0.0
+	_pedido_humano = Vector2i(999, 999)
+	_tirada_elegida = false
+	_tiro_humano = null
+	_ventana_reaccion = 0.0
+	_humano_dive_hecho = false
+	_base_humana = _base_position
+	global_position = _base_position
+	if _pes:
+		_jugar_espera(0.0)
+		animation_player.seek(0.0, true)
+
+
+func es_control_humano() -> bool:
+	return control_humano
+
+
+func tirada_elegida() -> bool:
+	return _tirada_elegida
+
+
+## Punto (x, y) del arco al que se va a tirar, para que la UI lo muestre.
+func get_objetivo_tirada_visual() -> Vector3:
+	if not _tirada_elegida:
+		return Vector3.INF
+	var p := _punto_pedido_humano()
+	return Vector3(p.x, p.y, 0.0)
+
+
+func _procesar_control_humano(delta: float) -> void:
+	var input := Input.get_vector("gk_move_left", "gk_move_right", "gk_move_up", "gk_move_down")
+	if not _tiro_lanzado:
+		if absf(input.x) > 0.15:
+			_ultima_dir_humana = signf(input.x)
+		_x_humano = clampf(
+			_x_humano + input.x * VELOCIDAD_LATERAL_HUMANA * delta,
+			-LIMITE_LATERAL_HUMANO, LIMITE_LATERAL_HUMANO)
+		global_position = _base_position + Vector3(_x_humano, 0.0, 0.0)
+		if Input.is_action_pressed("gk_dive") or Input.is_action_just_pressed("gk_dive"):
+			_capturar_pedido_humano(input)
+	else:
+		# Ya arranco la carrera o la patada: no se puede mover, pero si
+		# cambiar el lado/altura elegido hasta que salga el tiro.
+		if _tiro_humano == null:
+			if Input.is_action_just_pressed("gk_dive"):
+				_capturar_pedido_humano(input)
+		else:
+			# Ventana corta para reaccionar despues de la patada.
+			_ventana_reaccion -= delta
+			if Input.is_action_just_pressed("gk_dive"):
+				_capturar_pedido_humano(input)
+				_iniciar_dive_humano(_tiro_humano)
+				return
+			if _ventana_reaccion <= 0.0:
+				_tiro_humano = null
+
+
+## El rival arranco la carrera: se traba el movimiento del arquero (la eleccion
+## de lado/altura se puede seguir cambiando hasta que salga el tiro).
+func bloquear_movimiento_humano() -> void:
+	_tiro_lanzado = true
+
+
+func _capturar_pedido_humano(input: Vector2) -> void:
+	var lateral := 0
+	if input.x < -0.25:
+		lateral = -1
+	elif input.x > 0.25:
+		lateral = 1
+	else:
+		lateral = int(signf(_ultima_dir_humana))
+	var altura := 0
+	if input.y < -0.35:
+		altura = 1
+	elif input.y > 0.35:
+		altura = -1
+	_pedido_humano = Vector2i(lateral, altura)
+	_tirada_elegida = true
+
+
+func _punto_pedido_humano() -> Vector2:
+	var x := 0.0
+	if _pedido_humano.x < 0:
+		x = -PUNTO_LATERAL
+	elif _pedido_humano.x > 0:
+		x = PUNTO_LATERAL
+	var y := PUNTO_MEDIO
+	if _pedido_humano.y > 0:
+		y = PUNTO_ALTO
+	elif _pedido_humano.y < 0:
+		y = PUNTO_BAJO
+	return Vector2(x, y)
+
+
+## Resuelve el tiro contra la tirada elegida por el jugador. Si eligio el lado
+## correcto tiene una probabilidad alta de taparla; la altura y la reaccion
+## (haberla elegido antes de la patada) pesan.
+func _iniciar_dive_humano(shot: ShotData) -> void:
+	if _humano_dive_hecho:
+		return
+	_humano_dive_hecho = true
+	_tiro_humano = null
+	var retraso := VENTANA_REACCION_HUMANA - maxf(_ventana_reaccion, 0.0)
+	_ventana_reaccion = 0.0
+	_base_humana = Vector3(_base_position.x + _x_humano, _base_position.y, _base_position.z)
+
+	var pred := PredictionModule.calcular_target_real(shot.origin, shot.initial_velocity)
+	var punto_pedido := _punto_pedido_humano()
+	var zona_pedida := DiveAnimData.AnimSelector.clasificar_zona(punto_pedido, goal_width, goal_height)
+	var acierta := false
+	if pred.es_gol_potencial:
+		var zona_real := DiveAnimData.AnimSelector.clasificar_zona(pred.target, goal_width, goal_height)
+		var mismo_lado := (int(zona_real) % 3) == (int(zona_pedida) % 3)
+		if mismo_lado:
+			var dif_altura := absi(int(zona_real) / 3 - int(zona_pedida) / 3)
+			var prob: float = [0.90, 0.62, 0.14][dif_altura]
+			# Si esta muy lejos de la pelota, tiene que estirarse de mas.
+			var distancia_x: float = absf(pred.target.x - _base_humana.x)
+			if distancia_x > 3.6:
+				prob = 0.0
+			elif distancia_x > 2.7:
+				prob *= 0.5
+			# Reaccionar tarde tambien baja las chances.
+			if retraso > 0.15:
+				prob *= clampf(1.0 - (retraso - 0.15) * 1.8, 0.25, 1.0)
+			acierta = randf() <= prob
+
+	var vel_max: float = (stats.velocidad_max_atajar if stats else velocidad_max_atajar) + 8.0
+	if acierta:
+		_resultado = ResultModule.Resultado.ATAJA if shot.initial_velocity.length() <= vel_max else ResultModule.Resultado.REBOTE
+	else:
+		_resultado = ResultModule.Resultado.GOL
+	_contacto_hecho = false
+	_agarrada = false
+	_vel_llegada = Vector3.ZERO
+	_empalme_hecho = false
+	_ya_jugado = false
+
+	var tipo := DiveAnimData.Tipo.SAVE if _resultado == ResultModule.Resultado.ATAJA else DiveAnimData.Tipo.DIVE
+	var zona_anim := zona_pedida
+	var punto_anim := punto_pedido
+	if acierta:
+		# Si la tapo, la mano va donde va la pelota: se ve la estirada real.
+		zona_anim = DiveAnimData.AnimSelector.clasificar_zona(pred.target, goal_width, goal_height)
+		punto_anim = pred.target
+	var anim := DiveAnimData.AnimSelector.elegir(libreria_animaciones, zona_anim, tipo, punto_anim, true)
+	if not anim:
+		return
+	_current_anim = anim
+
+	var en_manos := PredictionModule.punto_en_z(shot.origin, shot.initial_velocity, _base_humana.z + anim.canonical_target.z)
+	var t: float = en_manos.tiempo
+	if t <= 0.0:
+		return
+	var objetivo := punto_pedido
+	if acierta:
+		objetivo = en_manos.punto
+	var inicio := 0.0
+	var velocidad := 1.0
+	if t >= anim.contact_time:
+		# Globo lento: se frena la animacion para que la mano llegue justo.
+		velocidad = clampf(anim.contact_time / t, 0.35, 1.0)
+	else:
+		var disponible := maxf(t, 0.05)
+		inicio = maxf(0.0, anim.contact_time - disponible * TimingModule.VELOCIDAD_MAXIMA)
+		velocidad = (anim.contact_time - inicio) / disponible
+	print("[Goalkeeper] TIRADA HUMANA: pedido %s (zona %s), real %s | %s | prob -> %s" % [
+		_pedido_humano, DiveAnimData.Zone.keys()[zona_pedida], DiveAnimData.Zone.keys()[DiveAnimData.AnimSelector.clasificar_zona(pred.target, goal_width, goal_height)],
+		anim.anim_name, ResultModule.Resultado.keys()[_resultado]])
+	iniciar_dive(anim, objetivo, inicio, velocidad, _base_humana, true)
+
 const SUFIJO_ESPEJO := "__M"
-const TRAS_ATAJAR := "dm_oop_gk_pk_idle_catch_0_2_cool"
-const FESTEJO_REBOTE := "dm_oop_gk_idle_0_0_idle_cheer_03"
+const TRAS_ATAJAR := ["dm_oop_gk_pk_idle_catch_0_2_cool", "dm_oop_gk_pk_idle_catch_0_2_glad"]
+const FESTEJOS_REBOTE := ["dm_oop_gk_idle_0_0_idle_cheer_03", "dm_oop_gk_idle_0_0_idle_walkCheer", "dm_oop_gk_idle_0_0_idle_walkCheer_04"]
+## Antes del remate a veces se prepara o amaga (PES: gkprejump). Va justo antes de tirarse,
+## si hay tiempo, y no siempre: si fuera siempre igual se volveria una pista. El amague
+## (frontFeint) no es en el lugar: amaga 0,4 m a un lado y termina 1,1 m corrido al otro,
+## en el aire, ya saliendo (front, 1,85 m). La estirada no puede empezar de cero desde
+## ahi: lleva al arquero hasta la pelota desde el centro y volveria para atras en el aire.
+## Sigue desde el cuadro de su clip en que el cuerpo ya se corrio lo mismo, como si el
+## amague hubiera sido su arranque. Por eso una preparacion que corre al arquero se usa (o
+## su espejo) solo hacia el lado de la estirada y si la estirada llega a correrse eso.
+const PREPARACIONES := ["gkprejump_0_0_pk_front", "gkprejump_0_0_pk_front_min", "gkprejump_0_0_pk_frontFeint"]
+const PROB_PREPARACION := 0.6
+## Hasta cuanto se puede correr la cadera para contar como preparacion en el lugar, y
+## cuanto puede quedar sin cubrir entre lo que corrio el amague y la estirada.
+const DERIVA_EN_EL_LUGAR := 0.25
+const DERIVA_TOLERANCIA := 0.35
+## La estirada que sigue a un amague tiene que dejar al menos esto antes del contacto.
+const ESTIRADA_MINIMA := 0.15
 const FUNDIDO_TRAS_REACCION := 0.5
 ## Contra una picada, cuantas veces se juega a un lado antes de la patada.
 const PROB_JUGARSE_PICADA := 0.65
@@ -272,6 +504,13 @@ func anticipar(origen: Vector3, velocidad: Vector3, t_hasta_patada: float, picad
 	_planear(origen, velocidad, t_hasta_patada, picada)
 
 func on_ball_kicked(shot: ShotData) -> void:
+	if control_humano:
+		_tiro_humano = shot
+		_tiro_lanzado = true
+		_ventana_reaccion = VENTANA_REACCION_HUMANA
+		if _tirada_elegida:
+			_iniciar_dive_humano(shot)
+		return
 	if _ya_jugado:
 		return
 	if _anticipado and (state == GKState.ANTICIPATING or state == GKState.DIVING):
@@ -363,11 +602,90 @@ func _planear(origen: Vector3, velocidad: Vector3, t_extra: float, picada: bool 
 		DiveAnimData.Zone.keys()[zona_real], velocidad.length(), anim.anim_name,
 		plan.delay, plan.inicio, plan.velocidad])
 	_programar(plan)
+	_preparacion += 1
+	if _pes and randf() < PROB_PREPARACION:
+		_preparar_antes(plan.delay)
+
+## Un amague o una preparacion que termina justo cuando arranca la estirada.
+func _preparar_antes(delay: float) -> void:
+	var corrimiento := _corrimiento_estirada(_current_anim, _objetivo.x)
+	var opciones := []
+	for n: String in PREPARACIONES:
+		for nombre in ["pes/" + n, "pes/" + n + SUFIJO_ESPEJO]:
+			if not animation_player.has_animation(nombre):
+				continue
+			var d := _deriva(nombre, animation_player.get_animation(nombre).length)
+			# Corrida, solo hacia donde se tira: si no, cambia de lado en el aire aunque el
+			# corrimiento de la estirada lo compense.
+			var hacia_la_estirada := signf(d) == signf(_current_anim.canonical_target.x)
+			if absf(d) < DERIVA_EN_EL_LUGAR or (hacia_la_estirada and absf(d - corrimiento - _deriva(_current_anim.anim_name, _salida_tras_amague(d - corrimiento))) < DERIVA_TOLERANCIA):
+				opciones.append(nombre)
+	if opciones.is_empty():
+		return
+	var anim: String = opciones.pick_random()
+	var largo := animation_player.get_animation(anim).length
+	if delay < largo + 0.15:
+		return
+	# Su propio numero: al patear se rehace el plan (_resincronizar) y eso no la cancela.
+	var id := _preparacion
+	await get_tree().create_timer(delay - largo - 0.05).timeout
+	if state == GKState.ANTICIPATING and id == _preparacion:
+		_prep_anim = anim
+		animation_player.play(anim, 0.2)
+
+## El segundo de la estirada en que su cadera ya se corrio `corrido` de costado (lo mas
+## cerca posible), sin pasarse del contacto. Solo sirven los cuadros desde los que la
+## estirada ya no vuelve hacia el centro: algunas juntan el peso hacia adentro antes de
+## salir, y seguir desde ahi se veria como volver para atras en el aire.
+func _salida_tras_amague(corrido: float) -> float:
+	var nombre := _current_anim.anim_name
+	var sentido := signf(corrido) if corrido != 0.0 else 1.0
+	var paso := 1.0 / 30.0
+	var hasta := _current_anim.contact_time - ESTIRADA_MINIMA
+	var mejor := 0.0
+	var minimo_adelante := INF
+	var t := floorf(hasta / paso) * paso
+	while t >= 0.0:
+		var h := _deriva(nombre, t) * sentido
+		if h <= minimo_adelante + 0.02 and absf(h - corrido * sentido) < absf(_deriva(nombre, mejor) * sentido - corrido * sentido):
+			mejor = t
+		minimo_adelante = minf(minimo_adelante, h)
+		t -= paso
+	return mejor
+
+## Cuanto corre de costado RepositionModule al arquero durante la estirada: hasta la
+## pelota si la toca y, si es gol, lo justo para que pase lejos (hasta 0,6 m hacia adentro).
+func _corrimiento_estirada(anim: DiveAnimData, objetivo_x: float) -> float:
+	if _resultado != ResultModule.Resultado.GOL:
+		return objetivo_x - anim.canonical_target.x
+	return reposition_module._offset_fallo(objetivo_x, anim.canonical_target.x)
+
+## Cuanto se corrio de costado la cadera (x del mundo) entre el principio del clip y t.
+func _deriva(anim: String, t: float) -> float:
+	var a := animation_player.get_animation(anim)
+	var pista := a.find_track("Node/Skeleton3D:mixamorig1Hips", Animation.TYPE_POSITION_3D)
+	if pista < 0:
+		return 0.0
+	var d := a.position_track_interpolate(pista, t) - a.position_track_interpolate(pista, 0.0)
+	return (skeleton.global_basis * d).x
+
+## Termino el amague: la estirada sale ya, sin volver a la espera (el amague termina en
+## el aire), y a la velocidad justa para llegar cuando estaba planeada.
+func _salir_del_amague() -> void:
+	var inicio: float = _plan_actual.get("inicio", 0.0)
+	var velocidad: float = _plan_actual.get("velocidad", 1.0)
+	var falta := maxf((_dive_ms - Time.get_ticks_msec()) / 1000.0, 0.0)
+	var estirada := maxf(_current_anim.contact_time - inicio, 0.05)
+	var nueva := clampf(estirada / (estirada / velocidad + falta), 0.5, TimingModule.VELOCIDAD_MAXIMA)
+	_plan_id += 1
+	iniciar_dive(_current_anim, _objetivo, inicio, nueva)
 
 func _programar(plan: Dictionary) -> void:
 	_plan_id += 1
 	var id := _plan_id
 	state = GKState.ANTICIPATING
+	_plan_actual = plan
+	_dive_ms = Time.get_ticks_msec() + roundi(plan.delay * 1000.0)
 	await get_tree().create_timer(plan.delay).timeout
 	if state == GKState.ANTICIPATING and id == _plan_id:
 		iniciar_dive(_current_anim, _objetivo, plan.inicio, plan.velocidad)
@@ -406,24 +724,42 @@ func _resincronizar(shot: ShotData) -> void:
 ## animacion arranca mas adelante y mas rapido para llegar justo al contacto.
 ## El contacto (_on_dive_terminado) lo detecta _process cuando la animacion
 ## llega a su contact_time.
-func iniciar_dive(anim: DiveAnimData, objetivo: Vector2, inicio: float = 0.0, velocidad: float = 1.0) -> void:
+func iniciar_dive(anim: DiveAnimData, objetivo: Vector2, inicio: float = 0.0, velocidad: float = 1.0, base: Vector3 = Vector3.INF, forzar_llegada: bool = false) -> void:
 	state = GKState.DIVING
 	_current_anim = anim
+	if base == Vector3.INF:
+		base = _base_position
 
-	# Restaurar pos base antes del dive por si acaso
-	global_position = _base_position
+	# Si viene de un amague, sale desde donde quedo el cuerpo.
+	var corrido := Vector3.ZERO
+	if _prep_anim != "":
+		var en := animation_player.current_animation_position if String(animation_player.current_animation) == _prep_anim else animation_player.get_animation(_prep_anim).length
+		corrido.x = _deriva(_prep_anim, en)
+		_prep_anim = ""
+		# La estirada sigue desde donde su cuerpo ya se corrio lo que corrio el amague, mas
+		# despacio para llegar al contacto cuando estaba planeado. Lo que falte lo cubre el
+		# corrimiento.
+		var esperado := _corrimiento_estirada(anim, objetivo.x)
+		var salida := _salida_tras_amague(corrido.x - esperado)
+		if salida > inicio:
+			var antes := anim.contact_time - inicio
+			velocidad = clampf(velocidad * (anim.contact_time - salida) / antes, 0.5, TimingModule.VELOCIDAD_MAXIMA)
+			inicio = salida
+		corrido.x -= _deriva(anim.anim_name, inicio)
+	global_position = base
 	_empuje_palo = 0.0
 	_empuje_objetivo = 0.0
 	_pos_huesos_prev.clear()
 
-	var llega := _resultado != ResultModule.Resultado.GOL
-	reposition_module.iniciar_offset(objetivo, anim, _base_position, llega, inicio)
+	var llega := forzar_llegada or _resultado != ResultModule.Resultado.GOL
+	var fundido := 0.15 if inicio < 0.05 else 0.3
+	reposition_module.iniciar_offset(objetivo, anim, base, llega, inicio, corrido, fundido)
 
 	if animation_player.has_animation(anim.anim_name):
 		# fundido desde la postura de espera; mas largo si se arranca la
 		# animacion por la mitad, para tapar el salto de pose
 		animation_player.speed_scale = velocidad
-		animation_player.play_section(anim.anim_name, inicio, -1.0, 0.15 if inicio < 0.05 else 0.3)
+		animation_player.play_section(anim.anim_name, inicio, -1.0, fundido)
 
 func _on_dive_terminado() -> void:
 	state = GKState.RESULT
@@ -489,6 +825,15 @@ func _avisar_contacto(que: String) -> void:
 	keeper_save.emit(ball)
 
 func reset_to_idle():
+	control_humano = false
+	_x_humano = 0.0
+	_pedido_humano = Vector2i(999, 999)
+	_tirada_elegida = false
+	_tiro_humano = null
+	_tiro_lanzado = false
+	_ventana_reaccion = 0.0
+	_humano_dive_hecho = false
+	_base_humana = _base_position
 	state = GKState.IDLE
 	_empuje_palo = 0.0
 	_empuje_objetivo = 0.0
@@ -501,6 +846,8 @@ func reset_to_idle():
 	_vel_llegada = Vector3.ZERO
 	_ya_jugado = false
 	_cola_reaccion = []
+	_preparacion += 1
+	_prep_anim = ""
 	global_position = _base_position
 	global_basis = _base_basis
 	if animation_player:

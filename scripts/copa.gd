@@ -16,6 +16,8 @@ const PERFIL := [
 const ALTURA_MANOS := 0.33
 
 var _sk: Skeleton3D
+## La copa de la ceremonia de PES se sostiene de las asas, con las manos a casi un metro.
+var escala := 1.0
 
 func _init() -> void:
 	name = "Copa"
@@ -82,4 +84,4 @@ func _process(_delta: float) -> void:
 	var costado := (der - izq).normalized()
 	var adelante := costado.cross(Vector3.UP).normalized()
 	var arriba := adelante.cross(costado).normalized()
-	global_transform = Transform3D(Basis(costado, arriba, adelante), (izq + der) * 0.5 - arriba * ALTURA_MANOS)
+	global_transform = Transform3D(Basis(costado, arriba, adelante).scaled(Vector3.ONE * escala), (izq + der) * 0.5 - arriba * ALTURA_MANOS * escala)

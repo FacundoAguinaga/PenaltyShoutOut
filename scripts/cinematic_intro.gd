@@ -8,36 +8,53 @@ class_name CinematicIntro
 signal intro_finished
 
 @export var camera: Camera3D
+## La ciudad 3D que acompana al estadio. Solo se muestra en la toma de ciudad
+## de la intro; despues se oculta para no gastar cuadros en algo que no se ve.
+@export var ciudad: Node3D
+## Si no se asigna, el SoundManager global (autoload): uno solo, para que no suenen dos
+## ambientes de tribuna encimados.
 @export var sound_manager: Node
 
 var is_intro_active: bool = true
 var current_shot_idx: int = 0
+var _ciudad_nodos: Array[Node3D] = []
 
 # Coordenadas calibradas para PenaltyShoutOut (Arco en Z=-11m, Pelota en Z=-2m, Cámara de juego en Z=2m)
 var shots: Array[Dictionary] = [
 	{
-		# Toma 1: Panorámica aérea general del estadio y luces
+		# Toma 1: vista general de la ciudad de noche, con el estadio en primer
+		# plano. La ciudad solo se ve aca; en el resto de la intro y del
+		# partido queda oculta.
+		"pos": Vector3(0.0, 45.0, 45.0),
+		"look": Vector3(-300.0, 15.0, 150.0),
+		"duration": 5.0,
+		"fov": 60.0,
+		"ciudad": true,
+		"drift": Vector3(-1.5, 0.4, 4.0)
+	},
+	{
+		# Toma 2: Panorámica aérea general del estadio y luces
 		"pos": Vector3(0.0, 18.0, 22.0),
 		"look": Vector3(0.0, 1.5, -4.0),
 		"duration": 3.0,
 		"fov": 65.0
 	},
 	{
-		# Toma 2: A ras de piso desde el interior de la red hacia el punto de penal
+		# Toma 3: A ras de piso desde el interior de la red hacia el punto de penal
 		"pos": Vector3(0.0, 0.9, -12.8),
 		"look": Vector3(0.0, 0.2, -2.0),
 		"duration": 2.5,
 		"fov": 55.0
 	},
 	{
-		# Toma 3: Enfoque al arquero en la línea de gol con tribunas de fondo
+		# Toma 4: Enfoque al arquero en la línea de gol con tribunas de fondo
 		"pos": Vector3(2.0, 1.4, -7.5),
 		"look": Vector3(0.0, 1.3, -11.0),
 		"duration": 2.2,
 		"fov": 45.0
 	},
 	{
-		# Toma 4: Primer plano de tensión en la pelota
+		# Toma 5: Primer plano de tensión en la pelota
 		"pos": Vector3(0.7, 0.35, -1.2),
 		"look": Vector3(0.0, 0.11, -2.0),
 		"duration": 2.0,
@@ -56,6 +73,11 @@ var current_tween: Tween
 func _ready() -> void:
 	if not camera:
 		camera = get_viewport().get_camera_3d()
+	if not sound_manager:
+		sound_manager = get_node_or_null("/root/SoundManager")
+	if not ciudad:
+		ciudad = get_parent().get_node_or_null("Sketchfab_Scene") as Node3D
+	_mostrar_ciudad(false)
 	start_intro()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -67,6 +89,24 @@ func start_intro() -> void:
 	is_intro_active = true
 	current_shot_idx = 0
 	_play_shot(0)
+
+
+## La ciudad son varios nodos (el modelo importado, el agua y dos copias
+## lejanas). Se agrupan para prenderlos/apagarlos juntos.
+func _buscar_ciudad() -> void:
+	if not _ciudad_nodos.is_empty():
+		return
+	for n in get_tree().get_nodes_in_group("ciudad"):
+		if n is Node3D:
+			_ciudad_nodos.append(n)
+	if _ciudad_nodos.is_empty() and ciudad:
+		_ciudad_nodos.append(ciudad)
+
+
+func _mostrar_ciudad(si: bool) -> void:
+	_buscar_ciudad()
+	for n in _ciudad_nodos:
+		n.visible = si
 
 func _play_shot(idx: int) -> void:
 	if not is_intro_active:
@@ -81,6 +121,9 @@ func _play_shot(idx: int) -> void:
 	
 	if current_tween:
 		current_tween.kill()
+
+	# La ciudad solo se ve en su toma; en las demas se apaga.
+	_mostrar_ciudad(bool(shot.get("ciudad", false)))
 		
 	if camera:
 		camera.fov = shot.fov
@@ -88,7 +131,8 @@ func _play_shot(idx: int) -> void:
 		camera.look_at(shot.look, Vector3.UP)
 		
 		current_tween = create_tween()
-		var drift_pos = shot.pos + Vector3(0.2, -0.1, -0.4)
+		var drift = shot.get("drift", Vector3(0.2, -0.1, -0.4))
+		var drift_pos = shot.pos + drift
 		current_tween.tween_property(camera, "global_position", drift_pos, shot.duration)
 		current_tween.tween_callback(func(): _play_shot(idx + 1))
 
@@ -96,6 +140,7 @@ func finish_intro() -> void:
 	if not is_intro_active:
 		return
 	is_intro_active = false
+	_mostrar_ciudad(false)
 	
 	if current_tween:
 		current_tween.kill()

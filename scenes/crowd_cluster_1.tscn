@@ -1,13 +1,13 @@
-[gd_scene format=4 uid="uid://qyqixcvo3vy6"]
+[gd_scene format=4 uid="uid://dplixdedehxk"]
 
-[ext_resource type="Script" path="res://scripts/crowd_cluster.gd" id="8_crowd"]
 [ext_resource type="Material" path="res://resources/crowd_lod0_mat1.tres" id="1_x017u"]
-[ext_resource type="Texture2D" uid="uid://i8d0ip2g5ohb" path="res://assets/models/people/tribuna 1 lod 0_0.png" id="2_fdrxi"]
-[ext_resource type="Texture2D" uid="uid://s8gp76m24nk3" path="res://assets/models/people/tribuna 1 lod 0_1.png" id="3_5s28c"]
-[ext_resource type="Texture2D" uid="uid://dh5u85nvm4l26" path="res://assets/models/people/tribuna 1 lod 1_texture_pbr_20250901.png" id="4_peigd"]
-[ext_resource type="Texture2D" uid="uid://b51qr088oe04l" path="res://assets/models/people/tribuna 1 lod 1_texture_pbr_20250901_metallic-texture_pbr_20250901_roughness.png" id="5_oyr22"]
-[ext_resource type="Texture2D" uid="uid://kc4cekdrr5ou" path="res://assets/models/people/tribuna 1 lod 1_texture_pbr_20250901_normal.png" id="6_vpl2o"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 1 lod 0_0.png" id="2_fdrxi"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 1 lod 0_1.png" id="3_5s28c"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 1 lod 1_texture_pbr_20250901.png" id="4_peigd"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 1 lod 1_texture_pbr_20250901_metallic-texture_pbr_20250901_roughness.png" id="5_oyr22"]
+[ext_resource type="Texture2D" path="res://assets/models/people/tribuna 1 lod 1_texture_pbr_20250901_normal.png" id="6_vpl2o"]
 [ext_resource type="Material" path="res://resources/crowd_lod2_mat1.tres" id="7_dmeuv"]
+[ext_resource type="Script" path="res://scripts/crowd_cluster.gd" id="8_crowd"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yehcw"]
 resource_name = "Material"

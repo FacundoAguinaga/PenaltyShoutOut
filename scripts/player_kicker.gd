@@ -84,6 +84,9 @@ var _reaccion := ""
 var _picada := false
 ## Una cinematica maneja al pateador: no reacciona por su cuenta.
 var en_cinematica := false
+## Lo maneja la IA (el rival patea): no lee el teclado, el GameManager elige
+## el tiro y llama a patear_automatico().
+var automatico := false
 var _ultima_picada := ""
 var _base_basis: Basis
 const VELOCIDAD_CARRERA := 0.72
@@ -279,8 +282,9 @@ func _process(delta: float):
 	if (_reaccion == "gol" or _reaccion == "fallo") and not en_cinematica:
 		_seguir_reaccion()
 
-func start_aiming():
+func start_aiming(es_automatico: bool = false):
 	en_cinematica = false
+	automatico = es_automatico
 	current_state = KickState.AIMING
 	if not _pes:
 		_place_behind_ball()
@@ -294,6 +298,8 @@ func start_aiming():
 		play_idle()
 
 func _process_aiming(delta: float):
+	if automatico:
+		return
 	var input := Input.get_vector("move_left", "move_right", "move_down", "move_up")
 
 	# Smooth aim follows input with momentum
@@ -316,6 +322,8 @@ func _process_aiming(delta: float):
 		start_charging()
 
 func _process_charging(delta: float):
+	if automatico:
+		return
 	var input := Input.get_vector("move_left", "move_right", "move_down", "move_up")
 
 	# Same smooth aim, but more instability at high power
@@ -352,6 +360,29 @@ func _release_kick(picada: bool = Input.is_action_pressed("kick_picar")):
 			randf_range(-0.5, 1.0) * overshoot * 2.0,
 			0.0
 		)
+
+	current_state = KickState.RUN_UP
+	run_up_timer = 0.0
+	is_kick_complete = false
+	if _pes:
+		_elegir_remate()
+
+	kick_connecting.emit(final_power, final_target)
+
+
+## El rival patea: el tiro ya viene elegido por el GameManager. Se saltea la
+## carga y arranca la carrera como si el jugador hubiera soltado el tiro.
+func patear_automatico(objetivo: Vector3, potencia: float, picada: bool = false) -> void:
+	if current_state != KickState.AIMING:
+		return
+	_picada = picada
+	final_target = objetivo
+	final_power = clampf(potencia, 0.0, max_power)
+	_smooth_aim = Vector2(
+		clampf(objetivo.x / aim_horizontal_range, -1.0, 1.0),
+		clampf(inverse_lerp(min_aim_goal_height, max_aim_goal_height, objetivo.y), -1.0, 1.0)
+	)
+	aim_target_3d = objetivo
 
 	current_state = KickState.RUN_UP
 	run_up_timer = 0.0
