@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://conkw87jc3swu"]
 
-[ext_resource type="PackedScene" path="res://assets/models/stadium_optimizado.scn" id="1_model"]
+[ext_resource type="PackedScene" path="res://assets/models/estadio/estadio.scn" id="1_model"]
 [ext_resource type="Resource" uid="uid://bsuaje12rux52" path="res://resources/hinchada/banco.tres" id="4_wt3y5"]
 [ext_resource type="Script" uid="uid://dxdb32581apys" path="res://scripts/cesped_volumetrico.gd" id="cesped_script"]
 [ext_resource type="Script" uid="uid://nnwqxfkmfokd" path="res://scripts/crowd_manager.gd" id="crowd_mgr_script"]

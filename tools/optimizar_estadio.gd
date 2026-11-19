@@ -16,7 +16,8 @@ extends SceneTree
 ## Uso (tarda un par de minutos):
 ##   godot --headless --path . -s res://tools/optimizar_estadio.gd
 ##
-## Si cambia stadium.glb hay que volver a correrla.
+## Si cambia stadium.glb hay que volver a correrla, y despues tools/partir_estadio.gd:
+## SALIDA no entra en git (pesa 390 MB) y stadium.tscn usa la copia en pedazos que arma esa.
 
 const ENTRADA := "res://assets/models/stadium.glb"
 const SALIDA := "res://assets/models/stadium_optimizado.scn"
